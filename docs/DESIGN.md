@@ -25,6 +25,7 @@
 
 使用：
 
+- Tailwind CSS
 - requestAnimationFrame()
 - CSS Transform
 - translate3d()
@@ -45,7 +46,6 @@ V0.1 不引入任何动画框架。
 - React
 - Vue
 - Three.js
-- Tailwind CSS
 - GSAP
 - Redis
 - Celery

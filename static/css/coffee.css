@@ -1,0 +1,168 @@
+/* =========================================================
+   Orbit Gallery
+   coffee.css
+========================================================= */
+
+/* =========================================================
+   Base
+========================================================= */
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    overflow: hidden;
+    background: #201713;
+}
+
+
+/* =========================================================
+   Background
+========================================================= */
+
+#background {
+
+    position: absolute;
+    inset: 0;
+
+    background-image: url("/static/images/background.webp");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+
+    z-index: 0;
+
+}
+
+
+/* =========================================================
+   Center Glow
+========================================================= */
+
+.center-glow {
+
+    position: absolute;
+
+    left: 50%;
+    top: 50%;
+
+    width: 60px;
+    height: 60px;
+
+    border-radius: 50%;
+
+    transform: translate(-50%, -50%);
+
+    background:
+        radial-gradient(
+            circle,
+            #fbbf24 0%,
+            #d97706 60%,
+            transparent 100%
+        );
+
+    box-shadow:
+        0 0 40px rgba(251,191,36,.30),
+        0 0 80px rgba(251,191,36,.15);
+
+    animation: pulse 3s ease-in-out infinite;
+
+}
+
+
+/* =========================================================
+   Steam
+========================================================= */
+
+.steam {
+
+    position: absolute;
+
+    width: 6px;
+    height: 15px;
+
+    border-radius: 50%;
+
+    background: rgba(255,255,255,.35);
+
+    filter: blur(4px);
+
+    opacity: 0;
+
+    animation: steamRise 2.5s linear infinite;
+
+}
+
+
+/* =========================================================
+   Animation
+========================================================= */
+
+@keyframes pulse {
+
+    0% {
+
+        transform:
+            translate(-50%, -50%)
+            scale(1);
+
+        opacity: .8;
+
+    }
+
+    50% {
+
+        transform:
+            translate(-50%, -50%)
+            scale(1.15);
+
+        opacity: 1;
+
+    }
+
+    100% {
+
+        transform:
+            translate(-50%, -50%)
+            scale(1);
+
+        opacity: .8;
+
+    }
+
+}
+
+
+@keyframes steamRise {
+
+    0% {
+
+        transform:
+            translateY(0)
+            scale(.8);
+
+        opacity: 0;
+
+    }
+
+    20% {
+
+        opacity: .4;
+
+    }
+
+    100% {
+
+        transform:
+            translateY(-60px)
+            scale(1.6);
+
+        opacity: 0;
+
+    }
+
+}

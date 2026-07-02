@@ -2,30 +2,69 @@
 
 {% block content %}
 
-<div id="app">
+<div id="app"
+     class="relative w-screen h-screen overflow-hidden">
 
-    <!-- Night Cafe Background -->
-    <div id="background"></div>
+    <!-- ========================================= -->
+    <!-- Background -->
+    <!-- ========================================= -->
 
+    <div id="background"
+         class="absolute inset-0">
+
+        <div class="center-glow"></div>
+
+    </div>
+
+
+    <!-- ========================================= -->
     <!-- Orbit Stage -->
-    <main id="orbit-stage">
+    <!-- ========================================= -->
+
+    <main id="orbit-stage"
+          class="absolute inset-0 flex items-center justify-center">
 
         <div id="orbit-container">
 
-            <!-- Orbit Ring -->
-            <div id="orbit-ring"></div>
+            <div id="orbit-ring">
+
+                <!-- JS 动态插入图片 -->
+
+            </div>
 
         </div>
 
     </main>
 
+
+    <!-- ========================================= -->
     <!-- Detail Panel -->
+    <!-- ========================================= -->
+
     <aside id="detail-panel">
+
+        <div id="detail-content">
+
+            <h2>Orbit Gallery</h2>
+
+            <p>Select a photo...</p>
+
+        </div>
 
     </aside>
 
+
+    <!-- ========================================= -->
     <!-- Timeline -->
+    <!-- ========================================= -->
+
     <footer id="timeline">
+
+        <div id="timeline-track">
+
+            <!-- JS 动态生成 -->
+
+        </div>
 
     </footer>
 

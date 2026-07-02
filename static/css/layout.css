@@ -1,0 +1,29 @@
+  /* 详情面板样式 */
+  .detail-panel {
+    position: absolute;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%);
+    width: 300px;
+    background: rgba(30, 41, 59, 0.8);
+    border-radius: 12px;
+    padding: 20px;
+    backdrop-filter: blur(10px);
+  }
+  /* 底部缩略图栏 */
+  .thumbnail-bar {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+  }
+  .thumbnail-item {
+    width: 80px;
+    height: 60px;
+    border-radius: 6px;
+    object-fit: cover;
+    cursor: pointer;
+  }
+  
