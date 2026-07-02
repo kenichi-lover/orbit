@@ -1,5 +1,3 @@
----
-
 # Orbit Gallery
 
 ## Project Blueprint V1.0
