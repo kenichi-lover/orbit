@@ -1,0 +1,14 @@
+[project]
+name = "orbit"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "alembic>=1.18.5",
+    "asyncpg>=0.31.0",
+    "fastapi[standard-no-fastapi-cloud-cli]>=0.139.0",
+    "pydantic-settings>=2.14.2",
+    "python-multipart>=0.0.32",
+    "sqlmodel>=0.0.39",
+]
