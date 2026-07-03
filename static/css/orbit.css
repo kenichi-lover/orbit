@@ -1,70 +1,375 @@
-  .photo-item {
-    position: absolute;
-    width: 120px;
-    height: 120px;
-    border-radius: 8px; /* 图片圆角 */
-    object-fit: cover;
-    border: 2px solid rgba(255,255,255,0.2);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
-  .photo-item:hover {
-    border-color: #ffab91; /* 悬停时边框变暖色 */
-    box-shadow: 0 0 20px rgba(255, 171, 145, 0.6);
-    transform: scale(1.05); /* 轻微放大 */
-  }
+/* ==========================================================
+   Orbit Gallery V0.2  orbit.css
+   ========================================================== */
 
-  #orbit-stage {
-    position: absolute;
-    inset: 0;
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    z-index:  10;
+/* ==========================================================
+   Orbit Stage - 添加 3D 视角
+   ========================================================== */
+#orbit-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  pointer-events: none;
+  perspective: 1000px; /* 3D 视角深度 */
 }
 
-#orbit-container {
-    position: relative;
-
-    width: 800px;
-    height: 800px;
+#orbit-system {
+  position: relative;
+  width: 760px;
+  height: 760px;
+  transform-style: preserve-3d; /* 保持 3D 变换 */
 }
 
-#orbit-ring {
-    position: relative;
-
-    width: 100%;
-    height: 100%;
+/* ==========================================================
+   Decorative Rings - 3D 环（围绕中心点）
+   ========================================================== */
+.orbit-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+  transform-style: preserve-3d;
 }
 
+.ring-outer {
+  width: 620px;
+  height: 620px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow:
+    inset 0 0 40px rgba(255, 255, 255, 0.03),
+    0 0 25px rgba(255, 180, 120, 0.08);
+  transform: translateZ(-20px); /* 后层 */
+}
+
+.ring-inner {
+  width: 420px;
+  height: 420px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    inset 0 0 25px rgba(255, 255, 255, 0.05),
+    0 0 18px rgba(255, 180, 120, 0.10);
+  transform: translateZ(20px); /* 前层 */
+}
+
+/* ==========================================================
+   Photo Layers - 3D 层（前后层次）
+   ========================================================== */
+.photo-layer {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.photo-layer.layer-0 { /* 前层 */
+  z-index: 3;
+}
+
+.photo-layer.layer-1 { /* 中层 */
+  z-index: 2;
+}
+
+.photo-layer.layer-2 { /* 后层 */
+  z-index: 1;
+}
+
+/* ==========================================================
+   Photo Card - 3D 照片
+   ========================================================== */
 .photo-item {
-    position: absolute;
-
-    left: 50%;
-    top: 50%;
-
-    width: 120px;
-    height: 120px;
-
-    border-radius: 10px;
-    object-fit: cover;
-
-    border: 2px solid rgba(255,255,255,.2);
-    box-shadow: 0 4px 15px rgba(0,0,0,.5);
-
-    cursor: pointer;
-
-    transition: all .3s ease;
-}
-
-.photo-item:hover {
-
-    border-color: #ffab91;
-
-    box-shadow: 0 0 20px rgba(255,171,145,.6);
-
-}
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: block;
+  width: 140px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+  pointer-events: auto;
+  transform-origin: center center;
+  transform-style: preserve-3d;
+  backface-visibility: hidden; /* 防止背面显示 */
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  will-change: transform, opacity;
   
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 1px 2px rgba(255, 255, 255, 0.25),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.15);
+}
+
+/* ==========================================================
+   Glass Highlight
+   ========================================================== */
+.photo-item::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.45),
+    rgba(255, 255, 255, 0.08) 45%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  pointer-events: none;
+}
+
+/* ==========================================================
+   Rim Light
+   ========================================================== */
+.photo-item::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 22px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 220, 170, 0.45),
+    rgba(255, 255, 255, 0.08),
+    rgba(255, 180, 120, 0.25)
+  );
+  z-index: -1;
+  filter: blur(12px);
+  opacity: 0.65;
+}
+
+/* ==========================================================
+   Hover - 3D 悬停效果
+   ========================================================== */
+.photo-item:hover {
+  transform: scale(1.08);
+  border-color: rgba(255, 220, 170, 0.85);
+  filter: brightness(1.15);
+  box-shadow:
+    0 20px 45px rgba(0, 0, 0, 0.55),
+    0 0 30px rgba(255, 190, 120, 0.40),
+    0 0 80px rgba(255, 190, 120, 0.20),
+    inset 0 2px 4px rgba(255, 255, 255, 0.35);
+}
+
+/* ==========================================================
+   Orbit Core - 3D 中心核心（咖啡杯）
+   ========================================================== */
+#orbit-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 110px;
+  height: 110px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  z-index: 4; /* 最高层 */
+  transform-style: preserve-3d;
+}
+
+.core-light {
+  position: absolute;
+  inset: 20px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    #ffd580,
+    #ffb347 65%,
+    rgba(255, 170, 90, 0.20)
+  );
+}
+
+.core-glow {
+  position: absolute;
+  inset: -35px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 200, 120, 0.40),
+    rgba(255, 170, 90, 0.10),
+    transparent
+  );
+  filter: blur(25px);
+  transform: translateZ(10px); /* 稍微向前 */
+}
+
+/* ==========================================================
+   Floating Animation - 3D 浮动
+   ========================================================== */
+@keyframes orbitFloat {
+  0%   { transform: translateY(0px) translateZ(0px); }
+  50%  { transform: translateY(-6px) translateZ(5px); }
+  100% { transform: translateY(0px) translateZ(0px); }
+}
+
+#orbit-system {
+  animation: orbitFloat 8s ease-in-out infinite;
+}
+
+/* ==========================================================
+   Detail Panel
+   ========================================================== */
+.detail-panel {
+  position: absolute;
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%);
+  width: 300px;
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 12px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  z-index: 100;
+}
+
+.detail-content {
+  color: white;
+}
+
+.detail-title {
+  font-size: 24px;
+  margin: 0 0 8px 0;
+  font-weight: 500;
+}
+
+.detail-category {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 12px 0;
+}
+
+.detail-description {
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 16px 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.detail-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 16px 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.detail-date, .detail-camera, .detail-location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 16px 0;
+}
+
+.tag {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.detail-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.action-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ==========================================================
+   Thumbnail Bar
+   ========================================================== */
+.thumbnail-bar {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  z-index: 50;
+}
+
+.thumbnail-item {
+  width: 80px;
+  height: 60px;
+  border-radius: 6px;
+  object-fit: cover;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.thumbnail-item:hover {
+  border-color: rgba(255, 220, 170, 0.5);
+}
+
+/* ==========================================================
+   Control Panel
+   ========================================================== */
+.control-panel {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 50;
+}
+
+.control-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.control-sliders {
+  display: flex;
+  gap: 16px;
+}
+
+.slider-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.slider-group label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.slider-group input {
+  width: 100px;
+}
+
+.control-3d {
+  display: flex;
+  gap: 8px;
+}
+

@@ -1,73 +1,75 @@
 {% extends "base.html" %}
-
 {% block content %}
 
-<div id="app"
-     class="relative w-screen h-screen overflow-hidden">
+<!-- 背景 -->
+<div id="background"></div>
 
-    <!-- ========================================= -->
-    <!-- Background -->
-    <!-- ========================================= -->
+<!-- 轨道舞台 -->
+<div id="orbit-stage">
+  <div id="orbit-system">
+    <!-- 装饰环 -->
+    <div class="orbit-ring ring-outer"></div>
+    <div class="orbit-ring ring-inner"></div>
 
-    <div id="background"
-         class="absolute inset-0">
-
-        <div class="center-glow"></div>
-
+    <!-- 中心核心（咖啡杯） -->
+    <div id="orbit-core">
+      <div class="core-glow"></div>
+      <div class="core-light"></div>
     </div>
 
+    <!-- 照片层 - 3D 多层轨道 -->
+    <div class="photo-layer" id="orbit-ring"></div>
+  </div>
+</div>
 
-    <!-- ========================================= -->
-    <!-- Orbit Stage -->
-    <!-- ========================================= -->
+<!-- 详情面板 -->
+<div class="detail-panel" id="detail-panel" style="display: none;">
+  <div class="detail-content">
+    <h2 class="detail-title">静谧之境</h2>
+    <p class="detail-category">自然风光</p>
+    <p class="detail-description">清晨的湖面如镜，倒映着远处的雪山与森林。</p>
+    <div class="detail-meta">
+      <div class="detail-date">2024.05.12</div>
+      <div class="detail-camera">Canon EOS R5</div>
+      <div class="detail-location">加拿大 · 班夫国家公园</div>
+    </div>
+    <div class="detail-tags">
+      <span class="tag">#旅行</span>
+      <span class="tag">#湖泊</span>
+      <span class="tag">#雪山</span>
+      <span class="tag">#森林</span>
+    </div>
+    <div class="detail-actions">
+      <button class="action-btn">❤️ 收藏</button>
+      <button class="action-btn">⬇️ 下载</button>
+      <button class="action-btn">🔗 分享</button>
+    </div>
+  </div>
+</div>
 
-    <main id="orbit-stage"
-          class="absolute inset-0 flex items-center justify-center">
+<!-- 底部缩略图栏 -->
+<div class="thumbnail-bar" id="thumbnail-bar"></div>
 
-        <div id="orbit-container">
-
-            <div id="orbit-ring">
-
-                <!-- JS 动态插入图片 -->
-
-            </div>
-
-        </div>
-
-    </main>
-
-
-    <!-- ========================================= -->
-    <!-- Detail Panel -->
-    <!-- ========================================= -->
-
-    <aside id="detail-panel">
-
-        <div id="detail-content">
-
-            <h2>Orbit Gallery</h2>
-
-            <p>Select a photo...</p>
-
-        </div>
-
-    </aside>
-
-
-    <!-- ========================================= -->
-    <!-- Timeline -->
-    <!-- ========================================= -->
-
-    <footer id="timeline">
-
-        <div id="timeline-track">
-
-            <!-- JS 动态生成 -->
-
-        </div>
-
-    </footer>
-
+<!-- 控制面板 -->
+<div class="control-panel">
+  <div class="control-buttons">
+    <button id="auto-rotate-btn">🔄 自动旋转</button>
+    <button id="pause-btn">⏸️ 暂停</button>
+  </div>
+  <div class="control-sliders">
+    <div class="slider-group">
+      <label>速度</label>
+      <input type="range" id="speed-slider" min="0" max="100" value="50">
+    </div>
+    <div class="slider-group">
+      <label>视角</label>
+      <input type="range" id="view-slider" min="0" max="100" value="50">
+    </div>
+  </div>
+  <div class="control-3d">
+    <button id="3d-btn">🎲 3D</button>
+  </div>
 </div>
 
 {% endblock %}
+
