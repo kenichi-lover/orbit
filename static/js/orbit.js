@@ -32,8 +32,107 @@ export function initOrbit() {
   initPhotos();
   initSteam();
   initThumbnails();
+  initNavigator();
   initControls();
   animate();
+}
+
+/**
+ * 初始化轨道示意图（Navigator）
+ */
+function initNavigator() {
+  const container = document.getElementById("navigator");
+  const canvas = document.getElementById("navigator-canvas");
+  if (!container || !canvas) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const rect = container.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+
+  const w = rect.width;
+  const h = rect.height;
+  const cx = w / 2;
+  const cy = h / 2;
+
+  // 最大半径对应外层轨道
+  const maxRadius = Math.min(cx, cy) - 8;
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+
+    // 画装饰环（俯视同心圆）
+    const radii = config.layerRadii.map(r => (r / config.orbitRadius) * maxRadius);
+
+    // 外环
+    ctx.beginPath();
+    ctx.arc(cx, cy, radii[0], 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // 内环
+    ctx.beginPath();
+    ctx.arc(cx, cy, radii[1], 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // 中心点
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255, 180, 100, 0.6)";
+    ctx.fill();
+
+    // 画照片点
+    const layers = document.querySelectorAll("#orbit-ring .photo-layer");
+    layers.forEach((layer) => {
+      const photos = layer.querySelectorAll(".photo-item");
+      const layerIndex = parseInt(layer.dataset.layer);
+      const radius = parseFloat(layer.dataset.radius) || config.orbitRadius;
+      const photoCount = photos.length;
+      const angleStep = (Math.PI * 2) / photoCount;
+      const scaledRadius = (radius / config.orbitRadius) * maxRadius;
+
+      photos.forEach((photo) => {
+        // 读取当前 transform 中的 x, z 值来映射到俯视 2D
+        const t = photo.style.transform;
+        const txMatch = t.match(/translate3d\(([-\d.]+)px/);
+        if (!txMatch) return;
+        const tx = parseFloat(txMatch[1]);
+        const tzMatch = t.match(/translate3d\([^,]+,[^,]+,([-\d.]+)px\)/);
+        const tz = tzMatch ? parseFloat(tzMatch[1]) : 0;
+
+        // 俯视投影：XZ 平面 -> 2D canvas
+        // 将轨道空间映射到 navigator 空间
+        const nx = cx + (tx / config.orbitRadius) * maxRadius;
+        const ny = cy + (tz / config.orbitRadius) * maxRadius;
+
+        const isSelected = photo.classList.contains("navigator-highlight");
+
+        ctx.beginPath();
+        ctx.arc(nx, ny, isSelected ? 5 : 3, 0, Math.PI * 2);
+        ctx.fillStyle = isSelected
+          ? "rgba(255, 200, 120, 0.95)"
+          : "rgba(255, 220, 170, 0.7)";
+        ctx.fill();
+
+        if (isSelected) {
+          ctx.beginPath();
+          ctx.arc(nx, ny, 7, 0, Math.PI * 2);
+          ctx.strokeStyle = "rgba(255, 200, 120, 0.4)";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      });
+    });
+  }
+
+  // 每帧更新 navigator
+  const origAnimate = animate;
+  window._drawNavigator = draw;
 }
 
 /**
@@ -172,6 +271,11 @@ function animate() {
     });
   });
   
+  // 更新 navigator
+  if (window._drawNavigator) {
+    window._drawNavigator();
+  }
+  
   requestAnimationFrame(animate);
 }
 
@@ -185,4 +289,3 @@ function showDetail(index) {
     console.log(`Photo ${index}`);
   }
 }
-
