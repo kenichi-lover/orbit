@@ -217,6 +217,9 @@ function initThumbnails() {
 function initControls() {
   const autoBtn = document.getElementById("auto-rotate-btn");
   const pauseBtn = document.getElementById("pause-btn");
+  const speedSlider = document.getElementById("speed-slider");
+  const viewSlider = document.getElementById("view-slider");
+  const orbitSystem = document.getElementById("orbit-system");
   
   if (autoBtn) {
     autoBtn.addEventListener("click", () => {
@@ -230,6 +233,30 @@ function initControls() {
       config.isAutoRotate = false;
       if (autoBtn) autoBtn.textContent = "🔄 自动旋转";
     });
+  }
+
+  if (speedSlider) {
+    // 根据滑块值 (0-100) 动态计算旋转速度，50 对应基础速度 0.005
+    speedSlider.addEventListener("input", (e) => {
+      const val = parseInt(e.target.value, 10);
+      config.rotationSpeed = 0.0001 + (val / 100) * 0.01;
+    });
+  }
+
+  if (viewSlider && orbitSystem) {
+    // 根据滑块值 (0-100) 动态计算俯仰视角 (0 到 70度)
+    // 默认值 50 对应 35度左右
+    const updateView = (val) => {
+      const angle = (val / 100) * 70;
+      orbitSystem.style.setProperty("--view-angle", `${angle}deg`);
+    };
+    
+    viewSlider.addEventListener("input", (e) => {
+      updateView(e.target.value);
+    });
+    
+    // 初始化视角
+    updateView(viewSlider.value);
   }
 }
 
@@ -289,3 +316,4 @@ function showDetail(index) {
     console.log(`Photo ${index}`);
   }
 }
+

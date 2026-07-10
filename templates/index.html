@@ -62,16 +62,34 @@
     <button id="pause-btn">⏸️ 暂停</button>
   </div>
   <div class="control-sliders">
+    <!-- 优化：增加了滑块组的视觉层次结构，引入图标和实时数值反馈，提升专业感 -->
     <div class="slider-group">
-      <label>速度</label>
-      <input type="range" id="speed-slider" min="0" max="100" value="50">
+      <div class="slider-header">
+        <label>
+          <!-- 优化：引入精简的SVG图标，使视觉语义更清晰 -->
+          <svg class="slider-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          速度
+        </label>
+        <span id="speed-value" class="slider-value">50%</span>
+      </div>
+      <!-- 优化：添加 custom-slider 类以便进行更深入的 CSS 样式定制 -->
+      <input type="range" id="speed-slider" class="custom-slider" min="0" max="100" value="50" oninput="document.getElementById('speed-value').innerText = this.value + '%'">
     </div>
+    
+    <!-- 优化：为视角控制同样增加图标与数值实时反馈 -->
     <div class="slider-group">
-      <label>视角</label>
-      <input type="range" id="view-slider" min="0" max="100" value="50">
+      <div class="slider-header">
+        <label>
+          <svg class="slider-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          视角
+        </label>
+        <span id="view-value" class="slider-value">50°</span>
+      </div>
+      <input type="range" id="view-slider" class="custom-slider" min="0" max="100" value="50" oninput="document.getElementById('view-value').innerText = this.value + '°'">
     </div>
   </div>
 </div>
 
 {% endblock %}
+
 

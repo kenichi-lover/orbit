@@ -353,7 +353,7 @@ body.light-theme #search-results .search-empty {
    ========================================================== */
 .navigator {
   position: absolute;
-  bottom: 100px;
+  bottom: 240px;
   left: 20px;
   width: 160px;
   height: 120px;
@@ -380,3 +380,4 @@ body.light-theme .navigator {
   border-color: rgba(0, 0, 0, 0.1);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
+
