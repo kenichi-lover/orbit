@@ -1,0 +1,31 @@
+from collections.abc import AsyncGenerator
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from sqlmodel import SQLModel
+from app.config.setting import settings
+
+engine: AsyncEngine = create_async_engine(
+    settings.DATABASE_URL, 
+    echo=settings.DEBUG, 
+    future=True
+)
+
+# 管理数据库连接和事务。
+async_session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(
+    bind=engine,    # 绑定到已创建的数据库引擎
+    expire_on_commit=False,    # 提交事务后不让对象过期
+    class_=AsyncSession,    # 显式指定创建的会话类为异步会话
+)
+
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    async with async_session_factory() as session:
+        try:
+            yield session
+        except Exception as e:
+            await session.rollback()  # 回滚事务
+            raise e
+
+async def init_db() -> None:
+    async with engine.begin() as conn:
+        await conn.run_sync(
+            SQLModel.metadata.create_all
+            )  # 创建所有表
