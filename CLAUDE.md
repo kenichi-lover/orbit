@@ -1,6 +1,6 @@
 # Orbit Gallery — 项目进度
 
-> 最后更新：2026-07-03
+> 最后更新：2026-07-19
 
 ---
 
@@ -11,8 +11,9 @@
 | 后端 | FastAPI + Jinja2 + StaticFiles |
 | 前端 | 原生 HTML/CSS/JS (ES Module)，无框架 |
 | 构建 | Tailwind CSS（`input.css` → `tailwind.css`） |
-| 数据库 | 未接入（计划 PostgreSQL + SQLModel） |
-| 部署 | uvicorn（本地开发） |
+| 数据库 | SQLModel + asyncpg + PostgreSQL（计划中） |
+| ORM 迁移 | Alembic |
+| 配置 | pydantic-settings (.env) |
 
 ---
 
@@ -23,6 +24,11 @@
 - [x] FastAPI 项目初始化，`main.py` 挂载静态文件和模板
 - [x] Jinja2 模板继承体系（`base.html` → `index.html`）
 - [x] 静态文件服务 `/static`
+- [x] 配置管理（`app/config/setting.py` 读取 `.env`）
+- [x] 异步数据库层（`app/config/database.py`：AsyncEngine + async_sessionmaker + get_session + create_db_and_tables）
+- [x] 数据模型定义
+  - `app/models/image.py` — Image 表（filename、storage_path、thumbnail_path、title、description、user_id、created_at、updated_at）
+  - `app/models/user.py` — User 表（username、email、hashed_password、is_active、is_superuser、created_at、updated_at）
 
 ### 前端 — 页面结构
 
@@ -81,7 +87,6 @@
 
 ### 优先级 P0 — 交互完善
 
-- [ ] **Detail Panel 视觉还原** — 当前为硬编码骨架，需按参考设计美化并与照片数据联动
 - [ ] **鼠标拖拽旋转** — 拖拽轨道系统旋转
 - [ ] **惯性旋转** — 松开后保持动量衰减
 - [ ] **滚动缩放** — 鼠标滚轮改变轨道半径/视角
@@ -91,17 +96,17 @@
 
 ### 优先级 P1 — 数据层
 
-- [ ] **PostgreSQL + SQLModel** — 数据模型定义、连接池、建表
-- [ ] **图片数据后端存储** — 表结构（id, title, tags, category, url 等）
-- [ ] **标签/相册分类** — 数据模型 + 查询
-- [ ] **搜索后端化** — 从客户端匹配改为 DB 查询
+- [ ] **DDL 建表** — 在 `main.py` lifespan 中调用 `create_db_and_tables()`
 - [ ] **图片上传** — multipart 表单 + Pillow 压缩 WebP
+- [ ] **Router / Service / Schema 分层** — CRUD 端点实现
+- [ ] **搜索后端化** — 从客户端匹配改为 DB 查询
+- [ ] **标签/相册分类** — 数据模型 + 查询
 
 ### 优先级 P2 — 功能扩展
 
 - [ ] **叙事模式** — `#nav-story` 按钮的页面切换
 - [ ] **筛选功能** — `#nav-filter` 按钮的下拉面板
-- [ ] **用户系统** — `#nav-avatar` 登录/注册
+- [ ] **用户系统** — `#nav-avatar` 登录/注册（JWT + bcrypt）
 - [ ] **收藏/下载/分享** — Detail Panel 操作按钮
 
 ---
@@ -113,3 +118,4 @@
 3. 速度滑块和视角滑块已有 HTML/CSS，但未绑定 JS 事件。
 4. `#detail-panel` 的 `showDetail()` 仅做 `display: block` + `console.log`，未与照片数据联动。
 5. 照片数据全部硬编码在 `config.imageUrls` 中，暂无后端来源。
+6. `app/models/user.py` 中 `images` 关系定义缩进错误（在类体外），需修复。
