@@ -1,9 +1,15 @@
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg:///orbit_db"
-    SECRET_KEY: str = "your-secret-key"
+    SECRET_KEY: SecretStr
     DEBUG: bool = False
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 天
+    ALGORITHM: str = "HS256"
+    # 如果未来需要 refresh token
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 30  # 30 天
+    
     model_config = SettingsConfigDict(
         env_file=".env", 
         env_file_encoding="utf-8")
