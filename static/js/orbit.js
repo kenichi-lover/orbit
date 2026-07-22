@@ -1,19 +1,7 @@
 // 核心配置
 const config = {
-  imageUrls: [
-    "https://picsum.photos/400/400?random=1",
-    "https://picsum.photos/400/400?random=2", 
-    "https://picsum.photos/400/400?random=3",
-    "https://picsum.photos/400/400?random=4",
-    "https://picsum.photos/400/400?random=5",
-    "https://picsum.photos/400/400?random=6",
-    "https://picsum.photos/400/400?random=7",
-    "https://picsum.photos/400/400?random=8",
-    "https://picsum.photos/400/400?random=9",
-    "https://picsum.photos/400/400?random=10",
-    "https://picsum.photos/400/400?random=11",
-    "https://picsum.photos/400/400?random=12",
-  ],
+  imageUrls: [],
+  imagesInfo: [],
   orbitRadius: 320,
   orbitLayers: 2, // 2层轨道：上层和下层
   layerPhotoCounts: [6, 4],
@@ -28,7 +16,27 @@ let rotation = 0;
 /**
  * 初始化 Orbit
  */
-export function initOrbit() {
+export async function initOrbit() {
+  try {
+    const res = await fetch('/api/images');
+    const data = await res.json();
+    if (data.images && data.images.length > 0) {
+      config.imageUrls = data.images.map(img => img.url);
+      config.imagesInfo = data.images;
+      
+      // Update layer photo counts based on total images
+      const total = config.imageUrls.length;
+      if (total >= 10) {
+        config.layerPhotoCounts = [Math.ceil(total * 0.6), Math.floor(total * 0.4)];
+      } else {
+        config.layerPhotoCounts = [total, 0];
+        config.orbitLayers = 1;
+      }
+    }
+  } catch(e) {
+    console.error('Error fetching images', e);
+  }
+  
   initPhotos();
   initSteam();
   initThumbnails();
@@ -312,8 +320,37 @@ function animate() {
 function showDetail(index) {
   const detail = document.getElementById("detail-panel");
   if (detail) {
+    const info = config.imagesInfo[index] || {};
+    
+    // Update content
+    const titleEl = detail.querySelector('.detail-title');
+    if (titleEl) titleEl.textContent = info.title || `Photo ${index}`;
+    
+    const catEl = detail.querySelector('.detail-category');
+    if (catEl) catEl.textContent = info.category || 'Gallery';
+    
+    const descEl = detail.querySelector('.detail-description');
+    if (descEl) descEl.textContent = info.description || '';
+    
+    const dateEl = detail.querySelector('.detail-date');
+    if (dateEl) dateEl.textContent = info.created_at ? new Date(info.created_at).toLocaleDateString() : '2024.05.12';
+    
+    const authorEl = detail.querySelector('.detail-camera');
+    if (authorEl) authorEl.textContent = info.user_name || 'System';
+    
+    const tagsContainer = detail.querySelector('.detail-tags');
+    if (tagsContainer) {
+      tagsContainer.innerHTML = '';
+      (info.tags || ['Photography']).forEach(tag => {
+        const span = document.createElement('span');
+        span.className = 'tag';
+        span.textContent = `#${tag}`;
+        tagsContainer.appendChild(span);
+      });
+    }
+    
     detail.style.display = "block";
-    console.log(`Photo ${index}`);
   }
 }
+
 
