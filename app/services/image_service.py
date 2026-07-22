@@ -8,7 +8,7 @@ from typing import Sequence
 from PIL import Image as PILImage
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import selectinload
-from sqlmodel import select, func
+from sqlmodel import DateTime, column, desc, select, func
 
 from app.models.image import Image
 from app.schemas.image_schema import ImageUpdateSchema  # 需自行定义，含 title/description/alt_text 等
@@ -103,14 +103,15 @@ def _detect_mime_type(file_data: bytes) -> str:
         try:
             with PILImage.open(BytesIO(file_data)) as img:
                 mapping = {
-                    "JPEG": "image/jpeg",
-                    "PNG": "image/png",
-                    "GIF": "image/gif",
-                    "WEBP": "image/webp",
+                    "JPEG": "images/jpeg",
+                    "PNG": "images/png",
+                    "GIF": "images/gif",
+                    "WEBP": "images/webp",
                 }
-                return mapping.get(img.format, "image/jpeg")
+                format_key = img.format or "jpeg"
+                return mapping.get(format_key, "images/webp")
         except Exception:
-            return "image/jpeg"
+            return "images/jpeg"
 
 
 async def _generate_thumbnail(relative_path: str) -> str | None:
@@ -131,7 +132,7 @@ async def _generate_thumbnail(relative_path: str) -> str | None:
     def _process():
         with PILImage.open(full_path) as img:
             # 保持比例缩放
-            img.thumbnail(THUMBNAIL_SIZE, PILImage.LANCZOS)
+            img.thumbnail(THUMBNAIL_SIZE, PILImage.Resampling.LANCZOS)
             # RGBA/P 模式转 RGB 以兼容 JPEG
             if img.mode in ("RGBA", "P"):
                 img = img.convert("RGB")
@@ -152,7 +153,7 @@ async def upload_image(
     session: AsyncSession,
     file_data: bytes,
     original_filename: str,
-    user_id: int,
+    user_name: str,
     title: str | None = None,
     description: str | None = None,
     alt_text: str | None = None,
@@ -169,7 +170,10 @@ async def upload_image(
     relative_path, file_name = _generate_storage_path(original_filename)
 
     # 3. 保存原图
-    await _write_file_async(file_data, _get_full_path(relative_path))
+    full_path = _get_full_path(relative_path)
+    if full_path is None:
+        raise ValueError("无法生成文件存储路径")
+    await _write_file_async(file_data, full_path)
 
     # 4. 生成缩略图
     thumb_relative = None
@@ -193,7 +197,7 @@ async def upload_image(
         title=title,
         description=description,
         alt_text=alt_text,
-        user_id=user_id,
+        user_name=user_name,
     )
     session.add(image)
     await session.commit()
@@ -208,7 +212,7 @@ async def get_image_by_id(
 ) -> Image | None:
     stmt = select(Image).where(Image.id == image_id)
     if not include_deleted:
-        stmt = stmt.where(Image.is_deleted.is_(False))
+        stmt = stmt.where(Image.is_deleted == False)
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 
@@ -220,14 +224,14 @@ async def get_image_by_file_name(
 ) -> Image | None:
     stmt = select(Image).where(Image.file_name == file_name)
     if not include_deleted:
-        stmt = stmt.where(Image.is_deleted.is_(False))
+        stmt = stmt.where(Image.is_deleted == False)
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 
 
 async def get_images_by_user(
     session: AsyncSession,
-    user_id: int,
+    user_name: str | None = None,
     skip: int = 0,
     limit: int = 20,
     include_deleted: bool = False,
@@ -236,9 +240,9 @@ async def get_images_by_user(
     获取用户图片列表（分页）
     返回: (数据列表, 总条数)
     """
-    where_clauses = [Image.user_id == user_id]
+    where_clauses = [Image.user_name == user_name]
     if not include_deleted:
-        where_clauses.append(Image.is_deleted.is_(False))
+        where_clauses.append(Image.is_deleted == False)
 
     # 总数
     count_stmt = select(func.count()).select_from(Image).where(*where_clauses)
@@ -249,7 +253,7 @@ async def get_images_by_user(
     stmt = (
         select(Image)
         .where(*where_clauses)
-        .order_by(Image.created_at.desc())
+        .order_by(desc(Image.created_at))
         .offset(skip)
         .limit(limit)
     )
@@ -307,8 +311,8 @@ async def cleanup_deleted_images(session: AsyncSession) -> int:
 
     cutoff = datetime.now(timezone.utc) - timedelta(days=30)
     stmt = select(Image).where(
-        Image.is_deleted.is_(True),
-        Image.deleted_at <= cutoff,
+        Image.is_deleted == True,
+        column("deleted_at", DateTime) <= cutoff
     )
     result = await session.execute(stmt)
     images = result.scalars().all()

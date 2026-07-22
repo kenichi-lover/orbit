@@ -6,7 +6,7 @@ from app.models.user import User
 
 
 class Image(SQLModel, table=True):
-    __tablename__ = "images"
+    __tablename__: str = "images"
 
     id: int | None = Field(default=None, primary_key=True)
 
@@ -32,6 +32,7 @@ class Image(SQLModel, table=True):
     alt_text: str | None = Field(default=None, max_length=255)  # 无障碍属性
 
     created_at: datetime = Field(
+        default= None,
         sa_column=Column(
             DATETIME(timezone=True), 
             server_default=func.now(),
@@ -51,8 +52,8 @@ class Image(SQLModel, table=True):
     deleted_at: datetime | None = Field(default=None)
 
 
-    user_id: int = Field(
-        foreign_key="users.id",
+    user_name: str = Field(
+        foreign_key="users.username",
         index=True,
         nullable=False
     )

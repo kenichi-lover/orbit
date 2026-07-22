@@ -46,7 +46,7 @@ class ImageReadSchema(ImageBaseSchema):
 
 class ImagePublic(ImageReadSchema):
     """Public-facing image payload used in API responses."""
-
+    author_name: str | None = Field(default=None, description="Username of the image author")
 
 class ImageUpdateSchema(BaseModel):
     """Schema for updating an image."""

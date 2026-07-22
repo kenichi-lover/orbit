@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from app.models.image import Image  # 避免循环导入问题
     
 class User(SQLModel, table=True):
-    __tablename__ = "users"
+    __tablename__: str = "users"
 
     id: int | None = Field(default=None, primary_key=True)
 
