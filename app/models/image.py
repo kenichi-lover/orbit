@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlmodel import DATETIME, Column, Field, Relationship, SQLModel, func
+from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
 from app.models.user import User
 
@@ -34,7 +34,7 @@ class Image(SQLModel, table=True):
     created_at: datetime = Field(
         default= None,
         sa_column=Column(
-            DATETIME(timezone=True), 
+            DateTime(timezone=True), 
             server_default=func.now(),
             index=True
         )
@@ -42,7 +42,7 @@ class Image(SQLModel, table=True):
     updated_at: datetime | None = Field(
         default=None,
         sa_column=Column(
-            DATETIME(timezone=True), 
+            DateTime(timezone=True), 
             onupdate=func.now()
         )
     )

@@ -2,6 +2,10 @@ from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
+    # --- 新增环境变量 ---
+    # 定义当前环境：development (开发) 或 production (生产)
+    APP_ENV: str = "development"  
+    
     DATABASE_URL: str = "postgresql+asyncpg:///orbit_db"
     SECRET_KEY: SecretStr
     DEBUG: bool = False
