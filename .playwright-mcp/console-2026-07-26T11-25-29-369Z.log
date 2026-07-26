@@ -1,0 +1,5 @@
+[      17ms] [ERROR] The Content-Security-Policy directive 'script-src-attr' contains the keyword 'none' alongside with other source expressions. The keyword 'none' must be the only source expression in the directive value, otherwise it is ignored. @ http://127.0.0.1:8000/:0
+[      30ms] [LOG] Orbit Gallery V0.1 @ http://127.0.0.1:8000/static/js/main.js:4
+[      33ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ http://127.0.0.1:8000/:0
+[      33ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:8000/api/images:0
+[      38ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:8000/undefined:0

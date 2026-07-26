@@ -8,18 +8,21 @@ from sqlmodel import SQLModel, text
 from  app.config.settings import settings
 from app.config.database import engine
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
 from app.routers.auth import (
     router as auth_router
-    )
+)
 
-from app.routers.image import(
+from app.routers.image import (
     router as image_router
-    )
+)
+
+from app.routers.index import (
+    router as index_router
+)
 
 from app.utils import limiter
+from fastapi.staticfiles import StaticFiles
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -70,14 +73,20 @@ async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) 
 中间件实现了“一次配置，全局覆盖”。
 """
 secure_headers = Secure.with_default_headers()
+# 允许内联脚本和 script 属性（模板中使用 inline <script> + onclick）
+for _h in secure_headers.headers_list:
+    if "ContentSecurity" in type(_h).__name__:
+        _h._directives["script-src"] = ["'self'", "'unsafe-inline'"]
+        _h._directives["script-src-attr"] = ["'self'", "'unsafe-inline'"]
+        break
 app.add_middleware(SecureASGIMiddleware, secure=secure_headers)
 
 app.include_router(auth_router)
 app.include_router(image_router)
+app.include_router(index_router)
 
 @app.get("/health")
 async def health_check():
-    # 优化: Health Check 中添加对数据库连接的校验
     try:
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
@@ -85,18 +94,5 @@ async def health_check():
     except Exception as e:
         logger.error(f"Health check failed: {e}")
         raise HTTPException(status_code=503, detail="Service Unavailable")
-    
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
-templates = Jinja2Templates(directory="templates")
-
-
-@app.get("/")
-async def index(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="index.html",
-        context={
-            "title": "Orbit Gallery",
-        },
-    )

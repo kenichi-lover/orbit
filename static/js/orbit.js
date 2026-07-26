@@ -20,9 +20,9 @@ export async function initOrbit() {
   try {
     const res = await fetch('/api/images');
     const data = await res.json();
-    if (data.images && data.images.length > 0) {
-      config.imageUrls = data.images.map(img => img.url);
-      config.imagesInfo = data.images;
+    if (data.items && data.items.length > 0) {
+      config.imageUrls = data.items.map(img => img.url);
+      config.imagesInfo = data.items;
       
       // Update layer photo counts based on total images
       const total = config.imageUrls.length;
@@ -336,12 +336,13 @@ function showDetail(index) {
     if (dateEl) dateEl.textContent = info.created_at ? new Date(info.created_at).toLocaleDateString() : '2024.05.12';
     
     const authorEl = detail.querySelector('.detail-camera');
-    if (authorEl) authorEl.textContent = info.user_name || 'System';
-    
+    if (authorEl) authorEl.textContent = info.author_name || 'System';
+
     const tagsContainer = detail.querySelector('.detail-tags');
     if (tagsContainer) {
       tagsContainer.innerHTML = '';
-      (info.tags || ['Photography']).forEach(tag => {
+      const tagsList = info.tags ? info.tags.split(',').map(t => t.trim()).filter(Boolean) : ['Photography'];
+      tagsList.forEach(tag => {
         const span = document.createElement('span');
         span.className = 'tag';
         span.textContent = `#${tag}`;

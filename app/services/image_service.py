@@ -8,7 +8,7 @@ from typing import Sequence
 from PIL import Image as PILImage
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import selectinload
-from sqlmodel import DateTime, column, desc, select, func
+from sqlmodel import DateTime, column, desc, select, func, or_
 
 from app.models.image import Image
 from app.schemas.image_schema import ImageUpdateSchema  # 需自行定义，含 title/description/alt_text 等
@@ -157,6 +157,8 @@ async def upload_image(
     title: str | None = None,
     description: str | None = None,
     alt_text: str | None = None,
+    category: str = "Gallery",
+    tags: str | None = None,
     generate_thumb: bool = True,
 ) -> Image:
     """
@@ -198,6 +200,8 @@ async def upload_image(
         description=description,
         alt_text=alt_text,
         user_name=user_name,
+        category=category,
+        tags=tags,
     )
     session.add(image)
     await session.commit()
@@ -327,6 +331,76 @@ async def cleanup_deleted_images(session: AsyncSession) -> int:
     if count:
         await session.commit()
     return count
+
+
+# ==================== 搜索功能 ====================
+
+def _parse_tags(tag_str: str | None) -> list[str]:
+    """将逗号分隔的 tags 字符串转为列表"""
+    if not tag_str:
+        return []
+    return [t.strip().lower() for t in tag_str.split(",") if t.strip()]
+
+
+async def search_images(
+    session: AsyncSession,
+    q: str | None = None,
+    category: str | None = None,
+    tag: str | None = None,
+    user_name: str | None = None,
+    skip: int = 0,
+    limit: int = 20,
+    include_deleted: bool = False,
+) -> tuple[Sequence[Image], int]:
+    """
+    搜索图片（关键词 + 分类 + 标签筛选，分页）
+    返回: (数据列表, 总条数)
+    """
+    where_clauses = []
+    if not include_deleted:
+        where_clauses.append(Image.is_deleted == False)
+
+    # 关键词搜索：标题或描述模糊匹配
+    if q and q.strip():
+        kw = f"%{q.strip()}%"
+        where_clauses.append(
+            or_(
+                Image.title.ilike(kw),
+                Image.description.ilike(kw),
+            )
+        )
+
+    # 分类筛选
+    if category and category.strip():
+        where_clauses.append(Image.category == category.strip())
+
+    # 标签筛选（精确匹配单个 tag）
+    if tag and tag.strip():
+        search_tag = tag.strip().lower()
+        # 用 LIKE 做子串匹配（tags 是逗号分隔存储）
+        where_clauses.append(Image.tags.like(f"%{search_tag}%"))
+
+    # 用户筛选
+    if user_name and user_name.strip():
+        where_clauses.append(Image.user_name == user_name.strip())
+
+    # 总数
+    if where_clauses:
+        count_stmt = select(func.count()).select_from(Image).where(*where_clauses)
+    else:
+        count_stmt = select(func.count()).select_from(Image)
+    total = await session.execute(count_stmt)
+    total_count = total.scalar_one() or 0
+
+    # 分页查询
+    stmt = select(Image).order_by(desc(Image.created_at))
+    if where_clauses:
+        stmt = stmt.where(*where_clauses)
+    stmt = stmt.offset(skip).limit(limit)
+
+    result = await session.execute(stmt)
+    items = result.scalars().all()
+    return items, total_count
 
 
 # ==================== URL / 路径工具 ====================

@@ -30,6 +30,8 @@ class Image(SQLModel, table=True):
     title: str | None = Field(default=None, max_length=100)
     description: str | None = Field(default=None, max_length=500)
     alt_text: str | None = Field(default=None, max_length=255)  # 无障碍属性
+    category: str = Field(default="Gallery", max_length=100)     # 相册/分类
+    tags: str | None = Field(default=None, max_length=500)       # 逗号分隔标签
 
     created_at: datetime = Field(
         default= None,

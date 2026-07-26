@@ -1,16 +1,15 @@
 from fastapi import (
     APIRouter, Depends, HTTPException, Request, Response, status)
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import IntegrityError  # 导入数据库异常
 
 from app.config.settings import settings
 from app.config.database import get_session
 from app.schemas.user_schema import (
     UserCreateSchema, UserLoginSchema, UserReadSchema, TokenResponse
     )
-from app.services import user_service
 from app.utils.limiter import limiter
 from app.utils.jwt import create_access_token
+from app.services import user_service
 from app.utils.security import verify_password
 from app.dependencies.auth import get_current_user
 from app.models.user import User
@@ -76,17 +75,16 @@ async def _authenticate_user(
         )
     return user
 
-@router.post("/register", response_model=UserReadSchema, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
 async def register(
     request: Request,
+    response: Response,
     data: UserCreateSchema,
     session: AsyncSession = Depends(get_session),
 ):
     """
-    用户注册。
-    优化：移除了显式的 check existing，直接尝试插入。
-    利用数据库 IntegrityError 捕获冲突，减少一次查询并解决并发问题。
+    用户注册，成功后自动登录并返回 JWT。
     """
     try:
         user = await user_service.create_user(
@@ -95,14 +93,20 @@ async def register(
             email=data.email,
             password=data.password,
         )
-        return user
-    except IntegrityError:
-        # 这里可以根据具体的数据库错误信息进一步判断是 username 冲突还是 email 冲突
-        # 如果需要精细提示，可以在 create_user 内部捕获并抛出自定义异常
+    except ValueError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username or Email already registered",
         )
+
+    access_token = create_access_token(subject=str(user.id))
+    set_auth_cookie(response, access_token)
+
+    return TokenResponse(
+        access_token=access_token,
+        token_type="bearer",
+        username=user.username,
+    )
 
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit("10/minute")

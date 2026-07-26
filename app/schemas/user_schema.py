@@ -27,7 +27,7 @@ class UserUpdateSchema(UserbaseSchema):
     is_active: bool | None = None
     is_superuser: bool | None = None
 
-class UserLoginSchema(UserbaseSchema):
+class UserLoginSchema(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=8, max_length=128)
 
