@@ -1,8 +1,7 @@
-from typing import Annotated
+from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, Form, File, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
 
 from app.config.database import get_session
 from app.dependencies.auth import get_current_user
@@ -25,13 +24,9 @@ router = APIRouter()
 # ==================== 辅助函数 ====================
 
 def _image_to_public(img: Image) -> ImagePublic:
-    assert img.id is not None, (
-        "Image must be persisted "
-        "before serialization"
-    )
-    # 为什么assert,详细说明看本地Documents/python/fastapi/文档
-
     """将 Image ORM 对象转为公共响应格式"""
+    assert img.id is not None, "Image must be persisted before serialization"
+    
     return ImagePublic(
         id=img.id,
         url=get_image_url(img.relative_path) or "",
@@ -39,6 +34,7 @@ def _image_to_public(img: Image) -> ImagePublic:
         category=img.category or "Gallery",
         description=img.description or None,
         tags=img.tags or None,
+        # 如果是 anonymous 则不在公开接口显示作者名
         author_name=img.user_name if img.user_name != "anonymous" else None,
     )
 
@@ -59,8 +55,10 @@ async def list_images(
         limit=p.limit,
     )
     public_items = [_image_to_public(img) for img in items]
+    
     safe_limit = p.limit if p.limit > 0 else 1
-    total_pages = -(-total // safe_limit) if total > 0 else 0  # ceil div
+    total_pages = -(-total // safe_limit) if total > 0 else 0
+    
     return {
         "items": [i.model_dump() for i in public_items],
         "total": total,
@@ -76,34 +74,31 @@ async def list_images(
 @limiter.limit("10/minute")
 async def upload_image(
     request: Request,
-    response: Response,
     session: Annotated[AsyncSession, Depends(get_session)],
-    file: Annotated[bytes, File(...)],
-    filename: Annotated[str, File(...)],
+    file: UploadFile = File(...),
     title: Annotated[str | None, Form()] = None,
     description: Annotated[str | None, Form()] = None,
     alt_text: Annotated[str | None, Form()] = None,
     category: Annotated[Category, Form()] = Category.GALLERY,
     tags: Annotated[str | None, Form()] = None,
+    # 【优化点】通过 Depends 注入当前用户，允许为 None (匿名上传)
+    current_user: Annotated[Optional[User], Depends(get_current_user)] = None,
 ):
     """上传图片，支持匿名 + 自动登录"""
-    if not filename:
+    if not file.filename:
         raise HTTPException(status_code=400, detail="No file uploaded")
 
-    # 确定上传者：优先已登录用户
-    cu: User | None = None
-    try:
-        cu = await get_current_user(request, session=session)
-    except Exception:
-        pass
+    # Read the file content
+    file_data = await file.read()
 
-    user_name = cu.username if cu else "anonymous"
+    # 【优化点】直接使用注入的用户对象，无需 try-except 手动调用
+    user_name = current_user.username if current_user else "anonymous"
 
     try:
         image = await image_service.upload_image(
             session,
-            file_data=file,
-            original_filename=filename,
+            file_data=file_data,
+            original_filename=file.filename,
             user_name=user_name,
             title=title,
             description=description,
@@ -111,14 +106,16 @@ async def upload_image(
             category=category.value,
             tags=tags,
         )
-        await session.flush()
+        await session.commit()
         return {
             "success": True,
             "image": _image_to_public(image).model_dump(),
         }
     except ValueError as e:
+        await session.rollback()
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        await session.rollback()
         raise HTTPException(status_code=500, detail="Upload failed")
 
 
@@ -138,8 +135,10 @@ async def search_images(
         limit=params.limit,
     )
     public_items = [_image_to_public(img) for img in items]
+    
     safe_limit = params.limit if params.limit > 0 else 1
     total_pages = -(-total // safe_limit) if total > 0 else 0
+    
     return {
         "items": [i.model_dump() for i in public_items],
         "total": total,
@@ -164,6 +163,7 @@ async def update_image_meta(
     image = await image_service.get_image_by_id(session, image_id)
     if not image:
         raise HTTPException(status_code=404, detail="Image not found")
+    
     updated = await image_service.update_image_meta(session, image, data)
     return {"success": True}
 
@@ -172,7 +172,8 @@ async def update_image_meta(
 async def delete_image(
     image_id: int,
     session: Annotated[AsyncSession, Depends(get_session)],
-    request: Request,
+    # 【优化点】删除操作必须登录，直接注入 User 而非 Optional
+    current_user: Annotated[User, Depends(get_current_user)],
     hard: Annotated[bool, Query()] = False,
 ):
     """删除图片（软删 / 硬删）"""
@@ -180,10 +181,13 @@ async def delete_image(
     if not image:
         raise HTTPException(status_code=404, detail="Image not found")
 
-    # 权限校验
-    cu = await get_current_user(request, session=session)
-    if image.user_name != "anonymous" and image.user_name != cu.username:
+    # 【优化点】权限校验逻辑优化
+    # 1. 只有上传者本人可以删除非匿名图片
+    # 2. 匿名用户图片可能需要管理员权限，这里简单处理为仅上传者可见（如果业务允许管理员删匿名图需额外判断）
+    if image.user_name != "anonymous" and image.user_name != current_user.username:
         raise HTTPException(status_code=403, detail="无权删除此图片")
+    
+    # 补充：如果业务允许管理员删除任何图片，可在此处添加 admin 检查
 
     await image_service.delete_image(session, image, hard_delete=hard)
     return {"success": True}

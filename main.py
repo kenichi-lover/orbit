@@ -82,7 +82,7 @@ for _h in secure_headers.headers_list:
 app.add_middleware(SecureASGIMiddleware, secure=secure_headers)
 
 app.include_router(auth_router)
-app.include_router(image_router)
+app.include_router(image_router, prefix="/api")
 app.include_router(index_router)
 
 @app.get("/health")

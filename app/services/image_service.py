@@ -241,26 +241,31 @@ async def get_images_by_user(
     include_deleted: bool = False,
 ) -> tuple[Sequence[Image], int]:
     """
-    获取用户图片列表（分页）
+    获取图片列表（分页）
     返回: (数据列表, 总条数)
+    如果 user_name 为 None，则返回所有用户的图片
     """
-    where_clauses = [Image.user_name == user_name]
+    where_clauses = []
     if not include_deleted:
         where_clauses.append(Image.is_deleted == False)
 
+    # 只有当指定了 user_name 时才过滤用户
+    if user_name is not None:
+        where_clauses.append(Image.user_name == user_name)
+
     # 总数
-    count_stmt = select(func.count()).select_from(Image).where(*where_clauses)
+    count_stmt = select(func.count()).select_from(Image)
+    if where_clauses:
+        count_stmt = count_stmt.where(*where_clauses)
     total = await session.execute(count_stmt)
     total_count = total.scalar_one() or 0
 
     # 分页
-    stmt = (
-        select(Image)
-        .where(*where_clauses)
-        .order_by(desc(Image.created_at))
-        .offset(skip)
-        .limit(limit)
-    )
+    stmt = select(Image).order_by(desc(Image.created_at))
+    if where_clauses:
+        stmt = stmt.where(*where_clauses)
+    stmt = stmt.offset(skip).limit(limit)
+
     result = await session.execute(stmt)
     items = result.scalars().all()
     return items, total_count

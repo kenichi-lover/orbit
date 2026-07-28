@@ -10,6 +10,8 @@
 
     <title>{{ title }}</title>
 
+    
+
     <!-- CSS -->
 
     <link rel="stylesheet"
@@ -73,7 +75,7 @@
       <div class="nav-avatar-container" style="display: flex; align-items: center; gap: 8px;">
         {% if user %}
           <span style="color: white; font-size: 14px; opacity: 0.8;">{{ user.username }}</span>
-          <a href="/logout" class="nav-icon-btn" title="退出" style="color: white; text-decoration: none; opacity: 0.8; font-size: 14px;">退出</a>
+          <button id="nav-logout-btn" class="nav-icon-btn" title="退出" style="color: white; background: none; border: none; cursor: pointer; opacity: 0.8; font-size: 14px; padding: 0;" onclick="handleLogout()">退出</button>
         {% else %}
           <button onclick="openAuthModal('login')" class="nav-icon-btn" title="登录" style="background: none; border: none; color: white; cursor: pointer; opacity: 0.8; font-size: 14px; padding: 0;">登录</button>
           <button onclick="openAuthModal('register')" class="nav-icon-btn" title="注册" style="background: none; border: none; color: white; cursor: pointer; opacity: 0.8; font-size: 14px; padding: 0;">注册</button>
@@ -135,23 +137,28 @@
     <form id="upload-form" style="display: flex; flex-direction: column; gap: 20px;">
       <div style="display: flex; flex-direction: column; gap: 8px;">
         <label for="upload-file" style="font-size: 14px; opacity: 0.8;">选择图片文件</label>
-        <input type="file" id="upload-file" accept="image/*" required style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; color: white; outline: none; font-size: 14px; width: 100%; box-sizing: border-box;">
+        <!-- Added name="file" attribute -->
+        <input type="file" id="upload-file" name="file" accept="image/*" required style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; color: white; outline: none; font-size: 14px; width: 100%; box-sizing: border-box;">
       </div>
       <div style="display: flex; flex-direction: column; gap: 8px;">
         <label for="upload-title" style="font-size: 14px; opacity: 0.8;">标题 (可选)</label>
-        <input type="text" id="upload-title" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; color: white; outline: none; font-size: 14px;">
+        <!-- Added name="title" attribute -->
+        <input type="text" id="upload-title" name="title" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; color: white; outline: none; font-size: 14px;">
       </div>
       <div style="display: flex; flex-direction: column; gap: 8px;">
         <label for="upload-desc" style="font-size: 14px; opacity: 0.8;">描述 (可选)</label>
-        <textarea id="upload-desc" style="height: 80px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; color: white; outline: none; font-size: 14px;"></textarea>
+        <!-- Added name="description" attribute -->
+        <textarea id="upload-desc" name="description" style="height: 80px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; color: white; outline: none; font-size: 14px;"></textarea>
       </div>
       <div style="display: flex; flex-direction: column; gap: 8px;">
         <label for="upload-category" style="font-size: 14px; opacity: 0.8;">分类 (可选)</label>
-        <input type="text" id="upload-category" placeholder="Gallery" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; color: white; outline: none; font-size: 14px;">
+        <!-- Added name="category" attribute -->
+        <input type="text" id="upload-category" name="category" placeholder="Gallery" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; color: white; outline: none; font-size: 14px;">
       </div>
       <div style="display: flex; flex-direction: column; gap: 8px;">
         <label for="upload-tags" style="font-size: 14px; opacity: 0.8;">标签 (可选，逗号分隔)</label>
-        <input type="text" id="upload-tags" placeholder="旅行, 风景, 摄影" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; color: white; outline: none; font-size: 14px;">
+        <!-- Added name="tags" attribute -->
+        <input type="text" id="upload-tags" name="tags" placeholder="旅行, 风景, 摄影" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); padding: 12px; border-radius: 6px; color: white; outline: none; font-size: 14px;">
       </div>
       <button type="submit" id="upload-submit-btn" style="background: white; color: black; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: opacity 0.2s; font-size: 14px;">
         上传
@@ -259,6 +266,26 @@
     }
   });
 
+  async function handleLogout() {
+    try {
+      const res = await fetch('/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      if (res.ok) {
+        // 退出成功后刷新页面以清除 Cookie 和更新用户状态
+        window.location.reload();
+      } else {
+        const data = await res.json();
+        alert('退出失败：' + (data.detail || '发生错误'));
+      }
+    } catch (err) {
+      console.error('Network error:', err);
+      alert('网络错误，请重试');
+    }
+  }
+
   // Close modal on click outside
   document.getElementById('auth-modal').addEventListener('click', (e) => {
     if (e.target === document.getElementById('auth-modal')) {
@@ -281,27 +308,29 @@
         e.preventDefault();
         const formData = new FormData(uploadForm);
 
-        // Add category and tags fields
-        const category = document.getElementById('upload-category')?.value || 'Gallery';
-        const tags = document.getElementById('upload-tags')?.value || '';
-        if (category) formData.append('category', category);
-        if (tags) formData.append('tags', tags);
-
         try {
           const res = await fetch('/api/images/upload', {
             method: 'POST',
-            body: formData
+            body: formData,
+            credentials: 'include' // Include authentication cookie
           });
 
           if (!res.ok) {
-            alert('上传失败');
+            const data = await res.json();
+            alert('上传失败：' + (data.error || data.detail || '发生错误'));
           } else {
-            alert('上传成功！');
-            closeUploadModal();
-            window.location.reload();
+            const data = await res.json();
+            if (data.success) {
+              alert('上传成功！');
+              closeUploadModal();
+              window.location.reload();
+            } else {
+              alert('上传失败：' + (data.error || '发生错误'));
+            }
           }
         } catch (err) {
-          alert('网络错误');
+          console.error('Upload error:', err);
+          alert('网络错误，请重试');
         }
       });
     }
