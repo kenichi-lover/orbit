@@ -22,37 +22,6 @@
   </div>
 </div>
 
-<!-- 叙事模式 -->
-<div id="story-stage" style="display: none; position: absolute; inset: 0; overflow-y: auto; z-index: 10; padding: 80px 20px 120px; color: white;">
-  <div id="story-timeline" style="max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px;">
-    <!-- 动态加载内容 -->
-  </div>
-</div>
-
-<!-- 详情面板 -->
-<div class="detail-panel" id="detail-panel" style="display: none;">
-  <div class="detail-content">
-    <h2 class="detail-title">静谧之境</h2>
-    <p class="detail-category">自然风光</p>
-    <p class="detail-description">清晨的湖面如镜，倒映着远处的雪山与森林。</p>
-    <div class="detail-meta">
-      <div class="detail-date">2024.05.12</div>
-      <div class="detail-camera">Canon EOS R5</div>
-      <div class="detail-location">加拿大 · 班夫国家公园</div>
-    </div>
-    <div class="detail-tags">
-      <span class="tag">#旅行</span>
-      <span class="tag">#湖泊</span>
-      <span class="tag">#雪山</span>
-      <span class="tag">#森林</span>
-    </div>
-    <div class="detail-actions">
-      <button class="action-btn">❤️ 收藏</button>
-      <button class="action-btn">⬇️ 下载</button>
-      <button class="action-btn">🔗 分享</button>
-    </div>
-  </div>
-</div>
 
 <!-- 底部缩略图栏 -->
 <div class="thumbnail-bar" id="thumbnail-bar"></div>
@@ -80,7 +49,7 @@
         <span id="speed-value" class="slider-value">50%</span>
       </div>
       <!-- 优化：添加 custom-slider 类以便进行更深入的 CSS 样式定制 -->
-      <input type="range" id="speed-slider" class="custom-slider" min="0" max="100" value="50" oninput="document.getElementById('speed-value').innerText = this.value + '%'">
+      <input type="range" id="speed-slider" class="custom-slider" min="0" max="100" value="50">
     </div>
     
     <!-- 优化：为视角控制同样增加图标与数值实时反馈 -->
@@ -92,7 +61,7 @@
         </label>
         <span id="view-value" class="slider-value">50°</span>
       </div>
-      <input type="range" id="view-slider" class="custom-slider" min="0" max="100" value="50" oninput="document.getElementById('view-value').innerText = this.value + '°'">
+      <input type="range" id="view-slider" class="custom-slider" min="0" max="100" value="50">
     </div>
   </div>
 </div>

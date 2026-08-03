@@ -82,3 +82,4 @@ async def require_superuser(
             detail="Admin access required",
         )
     return current_user
+

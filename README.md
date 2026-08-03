@@ -56,14 +56,30 @@ orbit/
 │   ├── models/
 │   │   ├── image.py             # Image 表模型（SQLModel table=True）
 │   │   └── user.py              # User 表模型
-│   ├── routers/                 # API 路由（待实现）
-│   ├── services/                # 业务逻辑层（待实现）
-│   ├── repositories/            # 数据访问层（待实现）
-│   └── schemas/                 # Pydantic DTO（待实现）
+│   ├── routers/
+│   │   ├── api/             # API 端点（JSON）：auth、image、user
+│   │   ├── pages/           # Jinja2 页面渲染：index、photo、profile、story
+│   │   └── health.py        # 健康检查
+│   ├── services/
+│   │   ├── image_service.py # 图片 CRUD 与搜索
+│   │   └── user_service.py  # 用户 CRUD
+│   ├── schemas/
+│   │   ├── image_schema.py  # Image DTO（Create/Update/Public）
+│   │   └── user_schema.py   # User DTO（Create/Login/Read）
+│   └── utils/
+│       ├── enums.py         # Category 枚举
+│       ├── jwt.py           # JWT 签发与验证
+│       ├── limiter.py       # 请求限流
+│       ├── pagination.py    # 分页工具
+│       └── security.py      # bcrypt 哈希/校验
 │
 ├── templates/
 │   ├── base.html                # 模板继承基座
-│   └── index.html               # 首页：导航栏 + 轨道舞台 + 详情面板
+│   └── pages/
+│       ├── index.html           # 首页：导航栏 + 轨道舞台 + 详情面板
+│       ├── photo.html           # 图片详情（/photo/{id}）
+│       ├── profile.html         # 个人中心（/profile）
+│       └── story.html           # 叙事模式（/story）
 │
 ├── static/
 │   ├── css/
@@ -72,16 +88,33 @@ orbit/
 │   │   ├── coffee.css           # 咖啡馆主题：背景、灯光、蒸汽动画
 │   │   ├── orbit.css            # 轨道舞台、装饰环、照片卡片、Detail Panel
 │   │   ├── layout.css           # Detail Panel + Thumbnail Bar 布局
-│   │   └── nav.css              # 顶部导航栏 + 搜索下拉
+│   │   ├── nav.css              # 顶部导航栏 + 搜索下拉
+│   │   └── components.css       # Modal、按钮、组件通用样式
 │   ├── js/
 │   │   ├── main.js              # 入口：模块加载 + 初始化
-│   │   └── orbit.js             # 核心：3D 轨道动画、缩略图栏、搜索、主题切换
+│   │   ├── orbit.js             # 核心：3D 轨道动画、缩略图栏、搜索、主题切换
+│   │   ├── nav.js               # 导航栏交互：页面切换、搜索联动 API
+│   │   ├── auth.js              # 登录/注册 Modal 逻辑 + 登出
+│   │   └── upload.js            # 图片上传 Modal + FormData 提交
 │   └── images/
 │       ├── background.webp      # 咖啡馆背景图
 │       └── *.webp               # 轨道展示用图片
 │
 └── uploads/                     # 用户上传文件（.gitignore）
 ```
+
+### 路由结构
+
+| 目录 | 职责 |
+|------|------|
+| `routers/api/auth.py` | 注册、登录、JWT 签发 |
+| `routers/api/image.py` | 图片 CRUD、搜索、上传 |
+| `routers/api/user.py` | 用户信息读写 |
+| `routers/pages/index.py` | 首页（/） |
+| `routers/pages/photo.py` | 图片详情（/photo/{id}） |
+| `routers/pages/profile.py` | 个人中心（/profile） |
+| `routers/pages/story.py` | 叙事模式（/story） |
+| `routers/health.py` | 健康检查（/health） |
 
 ---
 
@@ -91,18 +124,23 @@ orbit/
 
 | 文件 | 职责 |
 |------|------|
-| `tailwind.css` | Tailwind 预飞指令编译产物 |
+| `input.css` | Tailwind 入口（`@tailwind` 指令，不直接引用） |
+| `tailwind.css` | Tailwind 编译产物（不手工修改） |
 | `coffee.css` | 背景、咖啡杯核心、蒸汽动画、脉冲光晕 |
 | `orbit.css` | 轨道舞台、装饰环、照片卡片、玻璃高光、悬停效果、Detail Panel、Thumbnail Bar |
 | `layout.css` | Detail Panel + Thumbnail Bar 补充布局 |
 | `nav.css` | 顶部导航栏 + 搜索下拉 + 轨道示意图 |
+| `components.css` | Modal 遮罩、通用按钮、组件样式 |
 
 ### JavaScript 模块
 
 | 文件 | 职责 |
 |------|------|
-| `main.js` | 入口：加载 orbit.js，初始化全局行为 |
+| `main.js` | 入口：加载 orbit.js + nav.js，初始化全局行为 |
 | `orbit.js` | 3D 多层轨道动画、缩略图栏、客户端搜索、主题切换、Navigator 轨道示意图 |
+| `nav.js` | 页面切换（相册/叙事）、搜索接口联动、筛选面板触发 |
+| `auth.js` | 登录/注册 Modal 切换、表单提交、JWT 存储、登出 |
+| `upload.js` | 图片上传 Modal、FormData 提交、上传结果反馈 |
 
 ### 动画原则
 
@@ -147,6 +185,8 @@ orbit/
 | thumbnail_path | str \| None | 缩略图路径 |
 | title | str \| None | 标题 |
 | description | str \| None | 描述 |
+| category | str | 相册分类（默认 "Gallery"） |
+| tags | str \| None | 逗号分隔标签 |
 | user_id | int (FK) | 上传用户 |
 | created_at | datetime (TZ) | 创建时间 |
 | updated_at | datetime (TZ) | 更新时间 |
@@ -189,8 +229,8 @@ orbit/
 | V0.2 | 咖啡馆背景 + Orbit 基础旋转 | ❌ | ✅ 完成 |
 | V0.3 | 完整轨道动画 + 搜索 + 主题切换 + Navigator | ❌ | ✅ 完成 |
 | V0.4 | SQLModel + PostgreSQL + 数据模型 | ✅ | 🚧 模型已定义 |
-| V0.5 | 图片上传 + 相册 + 搜索后端化 | ✅ | 🔲 待开发 |
-| V0.6 | Story 模块 + Detail Panel 美化 | ✅ | 🔲 待开发 |
+| V0.5 | 图片上传 + 相册 + 搜索后端化 | ✅ | ✅ 完成 |
+| V0.6 | Story 模块 + Detail Panel 美化 | ✅ | ✅ 完成 |
 | V1.0 | Coffee World 完整体验 | ✅ | 🔲 待开发 |
 
 ---
@@ -206,14 +246,9 @@ orbit/
 
 ### P1 — 数据层
 - [ ] PostgreSQL 连接 + DDL 建表（lifespan 中调用）
-- [ ] 图片上传（multipart + Pillow WebP 压缩）
-- [ ] Router / Service / Schema 分层实现
-- [ ] 搜索后端化
 
 ### P2 — 功能扩展
-- [ ] 叙事模式切换
 - [ ] 筛选面板
-- [ ] 用户系统（登录 / 注册 / JWT）
 - [ ] 收藏 / 下载 / 分享
 
 ---

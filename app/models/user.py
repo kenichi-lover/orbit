@@ -18,21 +18,30 @@ class User(SQLModel, table=True):
     is_active: bool = Field(default=True)
     is_superuser: bool = Field(default=False)
     
-    created_at: datetime = Field(
+    created_at: datetime | None = Field(
+        default=None,    # <--- 新增：允许 Python 不传值
         sa_column=Column(
             DateTime(timezone=True),
-            server_default=func.now(),
+            server_default=func.now(),     # 数据库会自动填充
             onupdate=func.now(),
             index=True
         )
     )
-    updated_at: datetime = Field(
+    updated_at: datetime | None = Field(
+        default=None,
         sa_column=Column(
             DateTime(timezone=True), 
             server_default=func.now(),
             onupdate=func.now(),
         )
     )
+
+    def to_dict(self) -> dict:
+        """将 User 对象转换为字典，排除敏感信息"""
+        return {
+            "id": self.id,
+            "username": self.username,
+        }
 
 
     images: list["Image"] = Relationship(back_populates="author")

@@ -137,9 +137,4 @@ async def logout(response: Response):
     clear_auth_cookie(response)
     return {"message": "Logged out"}
 
-@router.get("/me", response_model=UserReadSchema)
-async def get_me(
-    current_user: User = Depends(get_current_user),
-):
-    """获取当前登录用户信息。"""
-    return current_user
+

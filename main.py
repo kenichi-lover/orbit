@@ -1,28 +1,49 @@
 import logging
 from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from secure import Secure
+from fastapi.staticfiles import StaticFiles
+from secure import Secure, ContentSecurityPolicy
 from secure.middleware import SecureASGIMiddleware
 from slowapi.errors import RateLimitExceeded
-from sqlmodel import SQLModel, text
-from  app.config.settings import settings
-from app.config.database import engine
-from fastapi import FastAPI, HTTPException, Request
+from sqlmodel import SQLModel
 
-from app.routers.auth import (
+from app.config.database import engine
+from  app.config.settings import settings
+
+from app.routers.api.auth import (
     router as auth_router
 )
 
-from app.routers.image import (
+from app.routers.api.image import (
     router as image_router
 )
 
-from app.routers.index import (
+from app.routers.api.user import (
+    router as user_router
+)
+
+from app.routers.health import (
+    router as health_router
+) 
+
+from app.routers.pages.index import (
     router as index_router
 )
 
+from app.routers.pages.story import (
+    router as story_router
+)
+from app.routers.pages.photo import (
+    router as photo_router
+)
+from app.routers.pages.profile import (
+    router as profile_router
+)
+from app.config.database import async_session_factory
+from app.dependencies.auth import resolve_user_from_cookie
 from app.utils import limiter
-from fastapi.staticfiles import StaticFiles
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -51,12 +72,16 @@ async def lifespan(app: FastAPI):
 
     logger.info("Shutdown complete.")
 
-
-
 app = FastAPI(
     title="Orbit Gallery",
     lifespan=lifespan,
 )
+
+@app.middleware("http")
+async def user_cookie_middleware(request: Request, call_next):
+    async with async_session_factory() as session:
+        request.state.user = await resolve_user_from_cookie(request, session)
+    return await call_next(request)
 
 app.state.limiter = limiter
 @app.exception_handler(RateLimitExceeded) # type: ignore
@@ -72,27 +97,27 @@ async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) 
 这不仅代码冗余，而且容易在新增接口时忘记添加。
 中间件实现了“一次配置，全局覆盖”。
 """
-secure_headers = Secure.with_default_headers()
-# 允许内联脚本和 script 属性（模板中使用 inline <script> + onclick）
-for _h in secure_headers.headers_list:
-    if "ContentSecurity" in type(_h).__name__:
-        _h._directives["script-src"] = ["'self'", "'unsafe-inline'"]
-        _h._directives["script-src-attr"] = ["'self'", "'unsafe-inline'"]
-        break
+# 1. 构建 CSP 策略（推荐链式调用）
+csp = (
+    ContentSecurityPolicy()
+    .default_src("'self'")  # 默认源：仅允许同源
+    .script_src("'self'", "'unsafe-inline'")  # 脚本源：允许同源和内联脚本
+    .script_src_attr("'self'", "'unsafe-inline'")  # 脚本属性源：允许同源和内联属性
+)
+
+# 2.直接在构造函数中传入 csp，同时保留默认头
+secure_headers = Secure(
+    csp=csp,
+).with_default_headers()
 app.add_middleware(SecureASGIMiddleware, secure=secure_headers)
 
-app.include_router(auth_router)
+app.include_router(auth_router, prefix="/api")
 app.include_router(image_router, prefix="/api")
+app.include_router(user_router, prefix="/api")
 app.include_router(index_router)
-
-@app.get("/health")
-async def health_check():
-    try:
-        async with engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))
-        return {"status": "ok", "db": "ok"}
-    except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        raise HTTPException(status_code=503, detail="Service Unavailable")
+app.include_router(story_router)
+app.include_router(photo_router)
+app.include_router(profile_router)
+app.include_router(health_router)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")

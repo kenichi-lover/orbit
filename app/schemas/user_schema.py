@@ -27,6 +27,13 @@ class UserUpdateSchema(UserbaseSchema):
     is_active: bool | None = None
     is_superuser: bool | None = None
 
+
+class UserPasswordUpdateSchema(BaseModel):
+    """密码修改请求"""
+    old_password: str = Field(..., min_length=8)
+    new_password: str = Field(..., min_length=8)
+
+
 class UserLoginSchema(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=8, max_length=128)

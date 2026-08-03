@@ -1,0 +1,73 @@
+/* 导航用户区 */
+.nav-user-actions { display: flex; align-items: center; gap: 8px; }
+.nav-username { color: white; font-size: 14px; opacity: 0.8; }
+.nav-text-btn {
+  background: none; border: none; color: white; cursor: pointer;
+  opacity: 0.8; font-size: 14px; padding: 0;
+}
+.nav-text-btn:hover { opacity: 1; }
+
+/* Modal */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.8); z-index: 9999;
+  justify-content: center; align-items: center;
+  backdrop-filter: blur(5px);
+}
+.modal-overlay.is-open { display: flex; }
+
+.modal-panel {
+  background: rgba(30, 30, 30, 0.9); padding: 40px; border-radius: 12px;
+  width: 100%; max-width: 400px; color: white;
+  border: 1px solid rgba(255,255,255,0.1); position: relative;
+}
+.modal-panel--wide { max-width: 500px; }
+
+.modal-close {
+  position: absolute; top: 15px; right: 15px;
+  background: none; border: none; color: white;
+  opacity: 0.6; cursor: pointer; font-size: 24px; padding: 0; line-height: 1;
+}
+.modal-close:hover { opacity: 1; }
+
+.modal-title {
+  margin-top: 0; text-align: center; margin-bottom: 30px;
+  font-weight: 300; letter-spacing: 2px;
+}
+
+/* Form */
+.form { display: flex; flex-direction: column; gap: 20px; }
+.form-group { display: flex; flex-direction: column; gap: 8px; }
+.form-label { font-size: 14px; opacity: 0.8; }
+.form-input {
+  background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2);
+  padding: 12px; border-radius: 6px; color: white;
+  outline: none; font-size: 14px; width: 100%; box-sizing: border-box;
+}
+.form-input:focus { border-color: rgba(255,255,255,0.4); }
+textarea.form-input { min-height: 80px; resize: vertical; }
+
+.btn-primary {
+  background: white; color: black; border: none;
+  padding: 12px; border-radius: 6px; font-weight: bold;
+  cursor: pointer; transition: opacity 0.2s; font-size: 14px;
+}
+.btn-primary:hover { opacity: 0.9; }
+
+.text-link {
+  background: none; border: none; color: white;
+  text-decoration: underline; cursor: pointer;
+  font-size: 14px; padding: 0;
+}
+.text-link:hover { opacity: 0.8; }
+
+.form-error {
+  color: #ff6b6b; margin-bottom: 20px;
+  text-align: center; font-size: 14px; display: none;
+}
+.form-error.is-visible { display: block; }
+
+.auth-switch {
+  text-align: center; margin-top: 20px;
+  font-size: 14px; opacity: 0.8;
+}

@@ -57,6 +57,37 @@ export function initNav() {
       performSearch(e.target.value.trim());
     }, 300);
   });
+
+  const storyTimeline = document.getElementById("story-timeline");
+  if (storyTimeline) {
+    storyTimeline.addEventListener('click', handleStoryAction);
+  }
+}
+
+function handleStoryAction(event) {
+  const btn = event.target.closest('[data-action]');
+  if (!btn) return;
+
+  const action = btn.getAttribute('data-action');
+  const id = btn.getAttribute('data-id');
+  if (!id) return;
+
+  switch (action) {
+    case 'edit-story':
+      editStory(id);
+      break;
+    case 'cancel-edit-story':
+      cancelEditStory(id);
+      break;
+    case 'save-story':
+      saveStory(id);
+      break;
+    case 'delete-story':
+      deleteStory(id);
+      break;
+    default:
+      break;
+  }
 }
 
 function filterImages(query) {
@@ -145,7 +176,7 @@ async function renderStoryMode(query = "") {
     let editBtnHtml = '';
     if (window.currentUser) {
       editBtnHtml = `
-        <button onclick="window.editStory('${img.id}')" style="margin-top: 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: background 0.2s;">
+        <button data-action="edit-story" data-id="${img.id}" style="margin-top: 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: background 0.2s;">
           编辑
         </button>
       `;
@@ -178,9 +209,9 @@ async function renderStoryMode(query = "") {
         <input type="text" id="edit-tags-${img.id}" value="${(img.tags || 'Photography')}" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px; margin-bottom: 12px; border-radius: 4px;" placeholder="Tags (comma separated)">
 
         <div style="display: flex; gap: 10px;">
-          <button onclick="window.saveStory('${img.id}')" style="background: white; color: black; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">保存</button>
-          <button onclick="window.cancelEditStory('${img.id}')" style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">取消</button>
-          <button onclick="window.deleteStory('${img.id}')" style="background: rgba(255,50,50,0.8); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: auto;">删除</button>
+          <button data-action="save-story" data-id="${img.id}" style="background: white; color: black; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">保存</button>
+          <button data-action="cancel-edit-story" data-id="${img.id}" style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">取消</button>
+          <button data-action="delete-story" data-id="${img.id}" style="background: rgba(255,50,50,0.8); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: auto;">删除</button>
         </div>
       </div>
     </div>
@@ -188,17 +219,17 @@ async function renderStoryMode(query = "") {
   }).join('');
 }
 
-window.editStory = function(id) {
+function editStory(id) {
   document.getElementById(`story-view-${id}`).style.display = 'none';
   document.getElementById(`story-edit-${id}`).style.display = 'block';
-};
+}
 
-window.cancelEditStory = function(id) {
+function cancelEditStory(id) {
   document.getElementById(`story-view-${id}`).style.display = 'block';
   document.getElementById(`story-edit-${id}`).style.display = 'none';
-};
+}
 
-window.saveStory = async function(id) {
+async function saveStory(id) {
   const title = document.getElementById(`edit-title-${id}`).value;
   const description = document.getElementById(`edit-desc-${id}`).value;
   const category = document.getElementById(`edit-cat-${id}`).value;
@@ -221,9 +252,9 @@ window.saveStory = async function(id) {
   } catch (err) {
     alert("网络错误");
   }
-};
+}
 
-window.deleteStory = async function(id) {
+async function deleteStory(id) {
   if (!confirm("确定要删除此图片吗？")) return;
 
   try {
@@ -239,4 +270,4 @@ window.deleteStory = async function(id) {
   } catch (err) {
     alert("网络错误");
   }
-};
+}

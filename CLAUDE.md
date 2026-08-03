@@ -1,6 +1,6 @@
 # Orbit Gallery — 项目进度
 
-> 最后更新：2026-07-24
+> 最后更新：2026-08-01
 
 ---
 
@@ -22,13 +22,14 @@
 ### 后端
 
 - [x] FastAPI 项目初始化，`main.py` 挂载静态文件和模板
-- [x] Jinja2 模板继承体系（`base.html` → `index.html`）
+- [x] Jinja2 模板继承体系（`base.html` → `pages/*.html`）
 - [x] 静态文件服务 `/static`
 - [x] 配置管理（`app/config/setting.py` 读取 `.env`）
 - [x] 异步数据库层（`app/config/database.py`：AsyncEngine + async_sessionmaker + get_session + create_db_and_tables）
 - [x] 数据模型定义
-  - `app/models/image.py` — Image 表（filename、storage_path、thumbnail_path、title、description、user_id、created_at、updated_at）
+  - `app/models/image.py` — Image 表（filename、storage_path、thumbnail_path、title、description、category、tags、user_id、created_at、updated_at）
   - `app/models/user.py` — User 表（username、email、hashed_password、is_active、is_superuser、created_at、updated_at）
+- [x] 路由分层（`routers/api/` + `routers/pages/` + `routers/health.py`）
 
 ### 前端 — 页面结构
 
@@ -46,7 +47,7 @@
   - 双层装饰环（outer / inner，不同 Z 轴深度）
   - 照片悬浮动画（`orbitFloat` keyframes）
 - [x] 底部缩略图栏（`layout.css`）
-- [x] 详情面板骨架（`index.html` + `orbit.css`）
+- [x] 详情面板骨架（`pages/index.html` + `orbit.css`）
 - [x] 控制面板骨架（按钮 + 滑块）
 
 ### 前端 — JavaScript 交互
@@ -76,8 +77,9 @@
 
 - [x] **注册后自动登录** — `/auth/register` 返回 JWT token + cookie
 - [x] **图片搜索接口** — `/api/search` 支持关键词(q)、分类(category)、标签(tag)筛选
-- [x] **Image 模型扩展** — 新增 `category`、`tags` 字段
 - [x] **图片上传接口** — `/api/images/upload` 支持 Form 提交 + category/tags
+- [x] **Image 模型扩展** — 新增 `category`、`tags` 字段
+- [x] **标签/相册分类** — 数据模型 + 查询
 - [x] **前端对接** — nav.js 搜索联动 API，story mode 使用搜索结果渲染
 - [x] **叙事模式（Story Mode）** — `story-stage` + `story-timeline` DOM 元素，CSS 样式，`renderStoryMode()` 动态加载图片时间线，支持编辑/删除
 - [x] **轨道数据对接修复** — orbit.js 从 `/api/images` 获取数据时改用 `data.items`（匹配新 API 格式）；`showDetail()` 使用 `author_name` 和拆分 tags
@@ -86,11 +88,23 @@
 
 | 文件 | 职责 |
 |------|------|
+| `input.css` | Tailwind 入口（`@tailwind` 指令，不直接引用） |
+| `tailwind.css` | Tailwind 编译产物（不手工修改） |
 | `coffee.css` | 背景、咖啡杯核心、蒸汽动画、脉冲 |
 | `orbit.css` | 轨道舞台、装饰环、照片卡片、玻璃高光、悬停效果、Detail Panel 样式、Thumbnail Bar 样式、Control Panel 样式、**叙事模式样式** |
 | `layout.css` | Detail Panel + Thumbnail Bar 补充样式 |
 | `nav.css` | 顶部导航栏 + 搜索下拉 + 轨道示意图 |
-| `tailwind.css` | Tailwind 编译产物（不手工修改） |
+| `components.css` | Modal 遮罩、通用按钮、组件样式 |
+
+### JavaScript 模块
+
+| 文件 | 职责 |
+|------|------|
+| `main.js` | 入口：加载 orbit.js + nav.js，初始化全局行为 |
+| `orbit.js` | 3D 多层轨道动画、缩略图栏、客户端搜索、主题切换、Navigator 轨道示意图 |
+| `nav.js` | 页面切换（相册/叙事）、搜索接口联动、筛选面板触发 |
+| `auth.js` | 登录/注册 Modal 切换、表单提交、JWT 存储、登出 |
+| `upload.js` | 图片上传 Modal、FormData 提交、上传结果反馈 |
 
 ---
 
@@ -108,17 +122,30 @@
 ### 优先级 P1 — 数据层
 
 - [ ] **DDL 建表** — 在 `main.py` lifespan 中调用 `create_db_and_tables()`
-- [x] **图片上传** — multipart 表单 + Pillow 压缩，支持 category/tags
-- [x] **Router / Service / Schema 分层** — CRUD 端点实现
-- [x] **搜索后端化** — `/api/search` 支持关键词/分类/标签筛选
-- [x] **标签/相册分类** — 数据模型 + 查询
 
 ### 优先级 P2 — 功能扩展
 
-- [x] **叙事模式** — `story-stage` + CSS 样式 + `renderStoryMode()` 动态时间线
 - [ ] **筛选功能** — `#nav-filter` 按钮的下拉面板
-- [ ] **用户系统** — `#nav-avatar` 登录/注册（JWT + bcrypt）—— 已完成登录/注册 Modal
+- [x] **用户系统** — `#nav-avatar` 登录/注册（JWT + bcrypt）—— auth.js + auth API 已实现
 - [ ] **收藏/下载/分享** — Detail Panel 操作按钮
+
+---
+
+## 路由结构
+
+```
+app/routers/
+├── api/          # API 端点（JSON 响应，受 JWT 保护）
+│   ├── auth.py   # 注册、登录、JWT 签发
+│   ├── image.py  # 图片 CRUD、搜索、上传
+│   └── user.py   # 用户信息读写
+├── pages/        # Jinja2 页面渲染（HTML 响应）
+│   ├── index.py  # 首页（/）
+│   ├── photo.py  # 图片详情（/photo/{id}）
+│   ├── profile.py# 个人中心（/profile）
+│   └── story.py  # 叙事模式（/story）
+└── health.py     # 健康检查（/health）
+```
 
 ---
 

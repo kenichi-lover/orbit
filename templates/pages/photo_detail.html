@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="photo-detail-page" style="padding-top: 80px; color: white; max-width: 1200px; margin: 0 auto;">
+  <img src="/api/images/{{ photo.id }}" alt="{{ photo.title }}" style="width: 100%; border-radius: 12px;">
+  <h1>{{ photo.title }}</h1>
+  <p>{{ photo.category }}</p>
+  <p>{{ photo.description }}</p>
+  <!-- 元信息、标签、操作按钮... -->
+</div>
+{% endblock %}
