@@ -13,7 +13,7 @@ class User(SQLModel, table=True):
     username: str = Field(index=True, unique=True, max_length=50)
     email: str = Field(index=True, unique=True, max_length=100)
 
-    hashed_password: str = Field(max_length=255)
+    hashed_password: str = Field(max_length=255, exclude=True)  # 排除敏感信息，避免在序列化时泄露
 
     is_active: bool = Field(default=True)
     is_superuser: bool = Field(default=False)

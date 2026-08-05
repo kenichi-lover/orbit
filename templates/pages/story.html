@@ -1,4 +1,16 @@
 {% extends "base.html" %}
+
+{% block content %}
+<div id="story-stage" style="display: block; position: absolute; inset: 0; padding: 100px 40px 40px; overflow-y: auto; z-index: 100; pointer-events: auto; background: url('/static/images/background01.webp') center/cover no-repeat;">
+	<div style="max-width: 800px; margin: 0 auto; background: rgba(0,0,0,0.35); padding: 40px; border-radius: 24px; box-shadow: 0 24px 60px rgba(0,0,0,0.45); backdrop-filter: blur(10px);">
+		<h2 style="color: white; font-size: 32px; font-weight: 300; margin-bottom: 40px; text-align: center; letter-spacing: 4px;">相册叙事</h2>
+		<div id="story-timeline" style="display: flex; flex-direction: column; gap: 40px;">
+			<p style="color: rgba(255,255,255,0.6); text-align: center;">正在加载叙事内容...</p>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
 {% block extra_js %}
-<script type="module" src="/static/js/pages/story.js"></script>
+<script type="module" src="/static/js/story.js"></script>
 {% endblock %}
