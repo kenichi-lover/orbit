@@ -58,36 +58,6 @@ export function initNav() {
     }, 300);
   });
 
-  const storyTimeline = document.getElementById("story-timeline");
-  if (storyTimeline) {
-    storyTimeline.addEventListener('click', handleStoryAction);
-  }
-}
-
-function handleStoryAction(event) {
-  const btn = event.target.closest('[data-action]');
-  if (!btn) return;
-
-  const action = btn.getAttribute('data-action');
-  const id = btn.getAttribute('data-id');
-  if (!id) return;
-
-  switch (action) {
-    case 'edit-story':
-      editStory(id);
-      break;
-    case 'cancel-edit-story':
-      cancelEditStory(id);
-      break;
-    case 'save-story':
-      saveStory(id);
-      break;
-    case 'delete-story':
-      deleteStory(id);
-      break;
-    default:
-      break;
-  }
 }
 
 function filterImages(query) {
@@ -128,7 +98,7 @@ async function performSearch(query) {
   if (!query) return;
 
   try {
-    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=20`);
+    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=20`, { credentials: 'include' });
     const data = await res.json();
     // Store search results for use in story mode re-render
     window._searchResults = data.items || [];
@@ -138,136 +108,7 @@ async function performSearch(query) {
 }
 
 async function renderStoryMode(query = "") {
-  const container = document.getElementById("story-timeline");
-  if (!container) return;
-
-  let images = [];
-
-  // If we have search results from a recent query, use them
-  if (window._searchResults && window._searchResults.length > 0) {
-    images = window._searchResults;
-  } else {
-    try {
-      const res = await fetch('/api/images?skip=0&limit=50');
-      const data = await res.json();
-      images = data.items || [];
-    } catch (err) {
-      console.error("Failed to load images", err);
-      container.innerHTML = '<p style="color: white; text-align: center;">加载叙事内容失败</p>';
-      return;
-    }
-  }
-
-  // Client-side filter on title/tags/category
-  if (query) {
-    images = images.filter(img =>
-      (img.title || '').toLowerCase().includes(query) ||
-      (img.url || '').toLowerCase().includes(query) ||
-      (img.category || '').toLowerCase().includes(query) ||
-      (img.tags || '').toLowerCase().includes(query)
-    );
-  }
-
-  container.innerHTML = images.map((img, index) => {
-    const isEven = index % 2 === 0;
-    const tagsList = img.tags ? img.tags.split(',').map(t => t.trim()).filter(Boolean) : ['Photography'];
-    const tagsHtml = tagsList.map(t => `<span style="background: rgba(255,255,255,0.1); padding: 4px 12px; border-radius: 20px; font-size: 12px; color: rgba(255,255,255,0.8);">#${t}</span>`).join('');
-
-    let editBtnHtml = '';
-    if (window.currentUser) {
-      editBtnHtml = `
-        <button data-action="edit-story" data-id="${img.id}" style="margin-top: 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: background 0.2s;">
-          编辑
-        </button>
-      `;
-    }
-
-    return `
-    <div style="background: rgba(30, 30, 30, 0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; display: flex; flex-direction: ${isEven ? 'row' : 'row-reverse'}; gap: 24px; align-items: center; transition: transform 0.3s;" class="story-item" id="story-item-${img.id}">
-      <div style="flex: 1;">
-        <img src="${img.url}" alt="${img.title}" style="width: 100%; height: 300px; object-fit: cover; border-radius: 12px;" />
-      </div>
-
-      <!-- View Mode -->
-      <div id="story-view-${img.id}" style="flex: 1; padding: 24px;">
-        <h3 style="color: white; font-size: 24px; font-weight: 300; margin-bottom: 12px;">${img.title}</h3>
-        <p style="color: rgba(255,255,255,0.6); font-size: 14px; line-height: 1.6;">
-          ${img.description || ''}
-        </p>
-        <div style="margin-top: 20px; display: flex; gap: 8px; flex-wrap: wrap;">
-          <span style="background: rgba(255,255,255,0.1); padding: 4px 12px; border-radius: 20px; font-size: 12px; color: rgba(255,255,255,0.8);">#${img.category || 'Gallery'}</span>
-          ${tagsHtml}
-        </div>
-        ${editBtnHtml}
-      </div>
-
-      <!-- Edit Mode -->
-      <div id="story-edit-${img.id}" style="flex: 1; padding: 24px; display: none;">
-        <input type="text" id="edit-title-${img.id}" value="${img.title}" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px; margin-bottom: 12px; border-radius: 4px;">
-        <textarea id="edit-desc-${img.id}" style="width: 100%; height: 100px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px; margin-bottom: 12px; border-radius: 4px;">${img.description || ''}</textarea>
-        <input type="text" id="edit-cat-${img.id}" value="${img.category || 'Gallery'}" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px; margin-bottom: 12px; border-radius: 4px;" placeholder="Category">
-        <input type="text" id="edit-tags-${img.id}" value="${(img.tags || 'Photography')}" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px; margin-bottom: 12px; border-radius: 4px;" placeholder="Tags (comma separated)">
-
-        <div style="display: flex; gap: 10px;">
-          <button data-action="save-story" data-id="${img.id}" style="background: white; color: black; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">保存</button>
-          <button data-action="cancel-edit-story" data-id="${img.id}" style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">取消</button>
-          <button data-action="delete-story" data-id="${img.id}" style="background: rgba(255,50,50,0.8); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: auto;">删除</button>
-        </div>
-      </div>
-    </div>
-    `;
-  }).join('');
-}
-
-function editStory(id) {
-  document.getElementById(`story-view-${id}`).style.display = 'none';
-  document.getElementById(`story-edit-${id}`).style.display = 'block';
-}
-
-function cancelEditStory(id) {
-  document.getElementById(`story-view-${id}`).style.display = 'block';
-  document.getElementById(`story-edit-${id}`).style.display = 'none';
-}
-
-async function saveStory(id) {
-  const title = document.getElementById(`edit-title-${id}`).value;
-  const description = document.getElementById(`edit-desc-${id}`).value;
-  const category = document.getElementById(`edit-cat-${id}`).value;
-  const tagsStr = document.getElementById(`edit-tags-${id}`).value;
-
-  try {
-    const res = await fetch(`/api/images/${id}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ title, description, category, tags: tagsStr })
-    });
-
-    if (res.ok) {
-      renderStoryMode(document.getElementById("nav-search-input") ? document.getElementById("nav-search-input").value.trim().toLowerCase() : "");
-    } else {
-      alert("保存失败");
-    }
-  } catch (err) {
-    alert("网络错误");
-  }
-}
-
-async function deleteStory(id) {
-  if (!confirm("确定要删除此图片吗？")) return;
-
-  try {
-    const res = await fetch(`/api/images/${id}?hard=true`, {
-      method: "DELETE"
-    });
-
-    if (res.ok) {
-      renderStoryMode(document.getElementById("nav-search-input") ? document.getElementById("nav-search-input").value.trim().toLowerCase() : "");
-    } else {
-      alert("删除失败");
-    }
-  } catch (err) {
-    alert("网络错误");
+  if (window._storyRender) {
+    await window._storyRender(query);
   }
 }

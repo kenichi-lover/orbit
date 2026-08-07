@@ -17,8 +17,10 @@ let rotation = 0;
  * 初始化 Orbit
  */
 export async function initOrbit() {
+  bindDetailModalEvents();
+
   try {
-    const res = await fetch('/api/images');
+    const res = await fetch('/api/images', { credentials: 'include' });
     const data = await res.json();
     if (data.items && data.items.length > 0) {
       config.imageUrls = data.items.map(img => img.url);
@@ -188,9 +190,6 @@ function initPhotos() {
       img.addEventListener("mouseleave", () => {
         config.isAutoRotate = true;
       });
-      img.addEventListener("click", () => {
-        showDetail(parseInt(img.dataset.index));
-      });
       
       layerPhotos.appendChild(img);
     }
@@ -219,6 +218,35 @@ function initThumbnails() {
     thumb.dataset.index = index;
     thumb.addEventListener("click", () => showDetail(index));
     thumbnailBar.appendChild(thumb);
+  });
+}
+
+function bindDetailModalEvents() {
+  const modal = document.getElementById("detail-modal");
+  const closeBtn = document.getElementById("detail-close");
+
+  if (!modal) return;
+
+  const closeModal = () => {
+    modal.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("modal-open");
+  };
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", closeModal);
+  }
+
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal || event.target.classList.contains("detail-backdrop")) {
+      closeModal();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && modal.classList.contains("is-open")) {
+      closeModal();
+    }
   });
 }
 
@@ -318,40 +346,65 @@ function animate() {
  * 显示详情
  */
 function showDetail(index) {
+  const modal = document.getElementById("detail-modal");
   const detail = document.getElementById("detail-panel");
-  if (detail) {
-    const info = config.imagesInfo[index] || {};
-    
-    // Update content
-    const titleEl = detail.querySelector('.detail-title');
-    if (titleEl) titleEl.textContent = info.title || `Photo ${index}`;
-    
-    const catEl = detail.querySelector('.detail-category');
-    if (catEl) catEl.textContent = info.category || 'Gallery';
-    
-    const descEl = detail.querySelector('.detail-description');
-    if (descEl) descEl.textContent = info.description || '';
-    
-    const dateEl = detail.querySelector('.detail-date');
-    if (dateEl) dateEl.textContent = info.created_at ? new Date(info.created_at).toLocaleDateString() : '2024.05.12';
-    
-    const authorEl = detail.querySelector('.detail-camera');
-    if (authorEl) authorEl.textContent = info.author_name || 'System';
+  if (!modal || !detail) return;
 
-    const tagsContainer = detail.querySelector('.detail-tags');
-    if (tagsContainer) {
-      tagsContainer.innerHTML = '';
-      const tagsList = info.tags ? info.tags.split(',').map(t => t.trim()).filter(Boolean) : ['Photography'];
-      tagsList.forEach(tag => {
-        const span = document.createElement('span');
-        span.className = 'tag';
+  const info = config.imagesInfo[index] || {};
+  const imageUrl = info.url || config.imageUrls[index] || "";
+  const title = info.title || `照片 ${index + 1}`;
+  const category = info.category || "Gallery";
+  const description = info.description || "暂无描述";
+  const createdAt = info.created_at
+    ? new Date(info.created_at).toLocaleDateString("zh-CN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      })
+    : "未提供日期";
+  const camera = info.camera || info.camera_model || "未提供设备";
+  const location = info.location || info.place || "未提供地点";
+  const author = info.author_name || "系统作者";
+
+  const titleEl = detail.querySelector(".detail-title");
+  const catEl = detail.querySelector(".detail-category");
+  const descEl = detail.querySelector(".detail-description");
+  const dateEl = detail.querySelector("#detail-date");
+  const cameraEl = detail.querySelector("#detail-camera");
+  const locationEl = detail.querySelector("#detail-location");
+  const tagsContainer = detail.querySelector(".detail-tags");
+
+  if (titleEl) titleEl.textContent = title;
+  if (catEl) catEl.textContent = category;
+  if (descEl) descEl.textContent = description;
+  if (dateEl) dateEl.textContent = createdAt;
+  if (cameraEl) cameraEl.textContent = `${camera} · ${author}`;
+  if (locationEl) locationEl.textContent = location;
+
+  if (tagsContainer) {
+    tagsContainer.innerHTML = "";
+    const tagsList = info.tags
+      ? info.tags.split(",").map((tag) => tag.trim()).filter(Boolean)
+      : [];
+
+    if (tagsList.length > 0) {
+      tagsList.forEach((tag) => {
+        const span = document.createElement("span");
+        span.className = "tag";
         span.textContent = `#${tag}`;
         tagsContainer.appendChild(span);
       });
+    } else {
+      const fallback = document.createElement("span");
+      fallback.className = "tag";
+      fallback.textContent = "#摄影";
+      tagsContainer.appendChild(fallback);
     }
-    
-    detail.style.display = "block";
   }
+
+  modal.classList.add("is-open");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
 }
 
 
