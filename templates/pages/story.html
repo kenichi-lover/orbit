@@ -12,5 +12,8 @@
 {% endblock %}
 
 {% block extra_js %}
+<script type="application/json" id="user-data">
+  {{ user | tojson if user else "null" }}
+</script >
 <script type="module" src="/static/js/story.js"></script>
 {% endblock %}

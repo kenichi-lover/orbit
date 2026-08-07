@@ -26,6 +26,30 @@
 <!-- 底部缩略图栏 -->
 <div class="thumbnail-bar" id="thumbnail-bar"></div>
 
+<!-- 详情模态框 -->
+<div class="detail-modal" id="detail-modal" aria-hidden="true">
+  <div class="detail-backdrop" data-close="true"></div>
+  <div class="detail-panel" id="detail-panel" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+    <button class="detail-close" id="detail-close" type="button" aria-label="关闭详情">&times;</button>
+    <div class="detail-content">
+      <h2 class="detail-title" id="detail-title">照片详情</h2>
+      <p class="detail-category" id="detail-category">Gallery</p>
+      <p class="detail-description" id="detail-description">暂无描述</p>
+      <div class="detail-meta">
+        <div class="detail-date"><span>📅</span><span id="detail-date">未提供日期</span></div>
+        <div class="detail-camera"><span>📷</span><span id="detail-camera">未提供设备</span></div>
+        <div class="detail-location"><span>📍</span><span id="detail-location">未提供地点</span></div>
+      </div>
+      <div class="detail-tags" id="detail-tags"></div>
+      <div class="detail-actions">
+        <button class="action-btn" type="button">❤️ 收藏</button>
+        <button class="action-btn" type="button">⬇️ 下载</button>
+        <button class="action-btn" type="button">🔗 分享</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- 轨道示意图 -->
 <div class="navigator" id="navigator">
   <canvas id="navigator-canvas"></canvas>

@@ -152,6 +152,19 @@ async def search_images(
 
 # ==================== 需要认证 ====================
 
+
+def _ensure_image_access(image: Image, current_user: User) -> None:
+    """校验当前用户是否有权限操作图片。"""
+    if current_user.is_superuser:
+        return
+
+    if image.user_name == "anonymous":
+        raise HTTPException(status_code=403, detail="匿名图片仅允许管理员操作")
+
+    if image.user_name != current_user.username:
+        raise HTTPException(status_code=403, detail="无权操作此图片")
+
+
 @router.post("/images/{image_id}")
 async def update_image_meta(
     image_id: int,
@@ -163,8 +176,10 @@ async def update_image_meta(
     image = await image_service.get_image_by_id(session, image_id)
     if not image:
         raise HTTPException(status_code=404, detail="Image not found")
-    
-    updated = await image_service.update_image_meta(session, image, data)
+
+    _ensure_image_access(image, current_user)
+
+    await image_service.update_image_meta(session, image, data)
     return {"success": True}
 
 
@@ -172,7 +187,6 @@ async def update_image_meta(
 async def delete_image(
     image_id: int,
     session: Annotated[AsyncSession, Depends(get_session)],
-    # 【优化点】删除操作必须登录，直接注入 User 而非 Optional
     current_user: Annotated[User, Depends(get_current_user)],
     hard: Annotated[bool, Query()] = False,
 ):
@@ -181,13 +195,7 @@ async def delete_image(
     if not image:
         raise HTTPException(status_code=404, detail="Image not found")
 
-    # 【优化点】权限校验逻辑优化
-    # 1. 只有上传者本人可以删除非匿名图片
-    # 2. 匿名用户图片可能需要管理员权限，这里简单处理为仅上传者可见（如果业务允许管理员删匿名图需额外判断）
-    if image.user_name != "anonymous" and image.user_name != current_user.username:
-        raise HTTPException(status_code=403, detail="无权删除此图片")
-    
-    # 补充：如果业务允许管理员删除任何图片，可在此处添加 admin 检查
+    _ensure_image_access(image, current_user)
 
     await image_service.delete_image(session, image, hard_delete=hard)
     return {"success": True}
