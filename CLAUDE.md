@@ -1,6 +1,6 @@
 # Orbit Gallery — 项目进度
 
-> 最后更新：2026-08-01
+> 最后更新：2026-08-07
 
 ---
 
@@ -24,7 +24,7 @@
 - [x] FastAPI 项目初始化，`main.py` 挂载静态文件和模板
 - [x] Jinja2 模板继承体系（`base.html` → `pages/*.html`）
 - [x] 静态文件服务 `/static`
-- [x] 配置管理（`app/config/setting.py` 读取 `.env`）
+- [x] 配置管理（`app/config/settings.py` 读取 `.env`）
 - [x] 异步数据库层（`app/config/database.py`：AsyncEngine + async_sessionmaker + get_session + create_db_and_tables）
 - [x] 数据模型定义
   - `app/models/image.py` — Image 表（filename、storage_path、thumbnail_path、title、description、category、tags、user_id、created_at、updated_at）
@@ -33,7 +33,7 @@
 
 ### 前端 — 页面结构
 
-- [x] 咖啡馆主题背景（`background.webp` + `coffee.css`）
+- [x] 咖啡馆主题背景（`background01.webp` + `coffee.css`）
 - [x] 顶部导航栏（`nav.css` + `base.html`）
   - 搜索框（展开/收起动画，关闭按钮）
   - 相册 / 叙事 切换按钮
@@ -47,8 +47,9 @@
   - 双层装饰环（outer / inner，不同 Z 轴深度）
   - 照片悬浮动画（`orbitFloat` keyframes）
 - [x] 底部缩略图栏（`layout.css`）
-- [x] 详情面板骨架（`pages/index.html` + `orbit.css`）
-- [x] 控制面板骨架（按钮 + 滑块）
+- [x] 详情面板（`detail-modal`）— 支持点击缩略图/详情链接触发，含关闭按钮、ESC 键关闭、遮罩点击关闭
+- [x] 控制面板（按钮 + 滑块）— 速度滑块、视角滑块
+- [x] 轨道示意图（Navigator）— Canvas 俯视轨道环，每帧同步照片位置
 
 ### 前端 — JavaScript 交互
 
@@ -59,6 +60,7 @@
   - XZ 平面投影实现真实前后深度
   - 深度驱动 scale + opacity（近大远小、近亮远暗）
   - 照片 hover 暂停自动旋转
+  - 点击缩略图触发 `showDetail()` 打开详情面板
 - [x] 缩略图栏初始化 + 点击触发 detail panel
 - [x] 自动旋转 / 暂停按钮
 - [x] 客户端实时搜索
@@ -68,21 +70,21 @@
 - [x] 深色/浅色主题切换
   - localStorage 持久化偏好
   - 全量 CSS 覆盖（nav、search results、navigator、buttons）
-- [x] 轨道示意图（Navigator）
-  - Canvas 绘制俯视轨道环
-  - 每帧同步照片实时位置（从 transform 读取）
-  - 小圆点标记每张照片，选中时放大
+- [x] 叙事模式（Story Mode）
+  - `story-stage` + `story-timeline` DOM 元素，CSS 样式
+  - `renderStoryTimeline()` 动态加载图片时间线，支持编辑/删除
+  - 权限控制：仅作者或超级管理员可见编辑/删除按钮
+  - 用户数据从 DOM `#current-user-data` 读取，避免 ES Module 加载时序问题
+  - XSS 防护：所有用户输入通过 `escapeHtml()` 转义
 
-### 后端 — 认证与搜索（新增）
+### 后端 — 认证与图片管理
 
-- [x] **注册后自动登录** — `/auth/register` 返回 JWT token + cookie
+- [x] **注册后自动登录** — `/auth/register` 返回 JWT token + httpOnly cookie
 - [x] **图片搜索接口** — `/api/search` 支持关键词(q)、分类(category)、标签(tag)筛选
-- [x] **图片上传接口** — `/api/images/upload` 支持 Form 提交 + category/tags
-- [x] **Image 模型扩展** — 新增 `category`、`tags` 字段
-- [x] **标签/相册分类** — 数据模型 + 查询
-- [x] **前端对接** — nav.js 搜索联动 API，story mode 使用搜索结果渲染
-- [x] **叙事模式（Story Mode）** — `story-stage` + `story-timeline` DOM 元素，CSS 样式，`renderStoryMode()` 动态加载图片时间线，支持编辑/删除
-- [x] **轨道数据对接修复** — orbit.js 从 `/api/images` 获取数据时改用 `data.items`（匹配新 API 格式）；`showDetail()` 使用 `author_name` 和拆分 tags
+- [x] **图片上传接口** — `/api/images/upload` 支持 Form 提交 + category/tags，允许匿名上传
+- [x] **图片 CRUD** — `GET /api/images`（公开）、`POST /api/images/{id}`（更新）、`DELETE /api/images/{id}`（软删/硬删，需认证）
+- [x] **权限控制** — `_ensure_image_access()` 校验作者/管理员权限，匿名图片仅管理员可操作
+- [x] **页面路由用户数据注入** — `story.py` 使用 `resolve_user_from_cookie` 从 cookie 解析用户并注入模板，支持前端权限判断
 
 ### 前端 — CSS 文件分工
 
@@ -91,7 +93,7 @@
 | `input.css` | Tailwind 入口（`@tailwind` 指令，不直接引用） |
 | `tailwind.css` | Tailwind 编译产物（不手工修改） |
 | `coffee.css` | 背景、咖啡杯核心、蒸汽动画、脉冲 |
-| `orbit.css` | 轨道舞台、装饰环、照片卡片、玻璃高光、悬停效果、Detail Panel 样式、Thumbnail Bar 样式、Control Panel 样式、**叙事模式样式** |
+| `orbit.css` | 轨道舞台、装饰环、照片卡片、玻璃高光、悬停效果、Detail Panel 样式、Thumbnail Bar 样式、Control Panel 样式、叙事模式样式 |
 | `layout.css` | Detail Panel + Thumbnail Bar 补充样式 |
 | `nav.css` | 顶部导航栏 + 搜索下拉 + 轨道示意图 |
 | `components.css` | Modal 遮罩、通用按钮、组件样式 |
@@ -101,10 +103,11 @@
 | 文件 | 职责 |
 |------|------|
 | `main.js` | 入口：加载 orbit.js + nav.js，初始化全局行为 |
-| `orbit.js` | 3D 多层轨道动画、缩略图栏、客户端搜索、主题切换、Navigator 轨道示意图 |
-| `nav.js` | 页面切换（相册/叙事）、搜索接口联动、筛选面板触发 |
+| `orbit.js` | 3D 多层轨道动画、缩略图栏、详情面板、主题切换、Navigator 轨道示意图 |
+| `nav.js` | 页面切换（相册/叙事）、搜索接口联动、客户端图片过滤 |
 | `auth.js` | 登录/注册 Modal 切换、表单提交、JWT 存储、登出 |
 | `upload.js` | 图片上传 Modal、FormData 提交、上传结果反馈 |
+| `story.js` | 叙事模式渲染、编辑/删除操作、权限校验、XSS 防护 |
 
 ---
 
@@ -116,8 +119,8 @@
 - [ ] **惯性旋转** — 松开后保持动量衰减
 - [ ] **滚动缩放** — 鼠标滚轮改变轨道半径/视角
 - [ ] **图片聚焦/飞向中心** — 点击照片后飞入中心并展开 detail panel
-- [x] **速度滑块联动** — `#speed-slider` 控制 `config.rotationSpeed`
-- [x] **视角滑块联动** — `#view-slider` 控制 `perspective` 值
+- [x] **速度滑块联动** — `#speed-slider` 控制 `config.rotationSpeed`，实时显示百分比
+- [x] **视角滑块联动** — `#view-slider` 控制 `perspective` 值，实时显示角度
 
 ### 优先级 P1 — 数据层
 
@@ -127,7 +130,8 @@
 
 - [ ] **筛选功能** — `#nav-filter` 按钮的下拉面板
 - [x] **用户系统** — `#nav-avatar` 登录/注册（JWT + bcrypt）—— auth.js + auth API 已实现
-- [ ] **收藏/下载/分享** — Detail Panel 操作按钮
+- [ ] **收藏/下载/分享** — Detail Panel 操作按钮（骨架已就绪）
+- [ ] **头像上传** — 用户头像自定义
 
 ---
 
@@ -135,7 +139,7 @@
 
 ```
 app/routers/
-├── api/          # API 端点（JSON 响应，受 JWT 保护）
+├── api/          # API 端点（JSON 响应）
 │   ├── auth.py   # 注册、登录、JWT 签发
 │   ├── image.py  # 图片 CRUD、搜索、上传
 │   └── user.py   # 用户信息读写
@@ -146,6 +150,14 @@ app/routers/
 │   └── story.py  # 叙事模式（/story）
 └── health.py     # 健康检查（/health）
 ```
+
+### 认证架构
+
+- `auth.py`（依赖模块）提供三个核心依赖：
+  - `get_current_user()` — 强制认证，失败抛 401（用于受保护 API）
+  - `resolve_user_from_cookie()` — 可选认证，失败返回 None（用于页面渲染）
+  - `require_superuser()` — 额外要求超级管理员权限
+- JWT token 通过 `access_token` cookie 存储，fetch 必须携带 `credentials: 'include'`
 
 ---
 
@@ -209,7 +221,7 @@ class Category(str, Enum):
 
 1. `layout.css` 中有缩进不一致问题（部分类名前有 2 空格缩进），不影响功能但影响可读性。
 2. `initSteam()` 是空函数占位，蒸汽效果尚未实现。
-3. 速度滑块和视角滑块已有 HTML/CSS，但未绑定 JS 事件。
-4. `#detail-panel` 的 `showDetail()` 仅做 `display: block` + `console.log`，未与照片数据联动。
-5. 照片数据全部硬编码在 `config.imageUrls` 中，暂无后端来源。
-6. `app/models/user.py` 中 `images` 关系定义缩进错误（在类体外），需修复。
+3. `app/models/user.py` 中 `images` 关系定义缩进错误（在类体外），需修复。
+4. **fetch 认证**：所有需要携带登录状态的 `fetch` 调用必须添加 `credentials: 'include'`，否则 cookie 不会发送。
+5. **页面路由用户注入**：页面级路由（如 `/story`）应使用 `resolve_user_from_cookie` 而非 `get_current_user`，以支持未登录用户浏览页面内容。
+6. **ES Module 加载时序**：`story.js` 作为独立 ES Module 加载，不应依赖 `window.currentUser` 缓存，而应从 DOM `#current-user-data` 读取当前用户信息。

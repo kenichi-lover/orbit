@@ -17,7 +17,7 @@ let rotation = 0;
  * 初始化 Orbit
  */
 export async function initOrbit() {
-  bindDetailModalEvents();
+  bindDetailPanelEvents();
 
   try {
     const res = await fetch('/api/images', { credentials: 'include' });
@@ -221,31 +221,25 @@ function initThumbnails() {
   });
 }
 
-function bindDetailModalEvents() {
-  const modal = document.getElementById("detail-modal");
+function bindDetailPanelEvents() {
+  const detail = document.getElementById("detail-panel");
   const closeBtn = document.getElementById("detail-close");
 
-  if (!modal) return;
-
-  const closeModal = () => {
-    modal.classList.remove("is-open");
-    modal.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("modal-open");
-  };
+  if (!detail) return;
 
   if (closeBtn) {
-    closeBtn.addEventListener("click", closeModal);
+    closeBtn.addEventListener("click", hideDetail);
   }
 
-  modal.addEventListener("click", (event) => {
-    if (event.target === modal || event.target.classList.contains("detail-backdrop")) {
-      closeModal();
+  detail.addEventListener("click", (event) => {
+    if (event.target === detail) {
+      hideDetail();
     }
   });
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && modal.classList.contains("is-open")) {
-      closeModal();
+    if (event.key === "Escape" && detail.classList.contains("is-open")) {
+      hideDetail();
     }
   });
 }
@@ -346,9 +340,8 @@ function animate() {
  * 显示详情
  */
 function showDetail(index) {
-  const modal = document.getElementById("detail-modal");
   const detail = document.getElementById("detail-panel");
-  if (!modal || !detail) return;
+  if (!detail) return;
 
   const info = config.imagesInfo[index] || {};
   const imageUrl = info.url || config.imageUrls[index] || "";
@@ -402,9 +395,21 @@ function showDetail(index) {
     }
   }
 
-  modal.classList.add("is-open");
-  modal.setAttribute("aria-hidden", "false");
+  detail.classList.add("is-open");
+  detail.setAttribute("aria-hidden", "false");
   document.body.classList.add("modal-open");
+}
+
+/**
+ * 隐藏详情（新增函数，替代原来的关闭逻辑）
+ */
+function hideDetail() {
+  const detail = document.getElementById("detail-panel");
+  if (!detail) return;
+
+  detail.classList.remove("is-open");
+  detail.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("modal-open");
 }
 
 

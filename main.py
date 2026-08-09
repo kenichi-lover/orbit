@@ -99,10 +99,13 @@ async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) 
 """
 # 1. 构建 CSP 策略（推荐链式调用）
 csp = (
-    ContentSecurityPolicy()
-    .default_src("'self'")  # 默认源：仅允许同源
-    .script_src("'self'", "'unsafe-inline'")  # 脚本源：允许同源和内联脚本
-    .script_src_attr("'self'", "'unsafe-inline'")  # 脚本属性源：允许同源和内联属性
+ContentSecurityPolicy()
+    .default_src("'self'")     # 默认源：仅允许同源
+    .script_src("'self'", "'unsafe-inline'")
+    .script_src_attr("'self'", "'unsafe-inline'")
+    .img_src("'self'", "data:", "https://images.unsplash.com", "https://cdn.jsdelivr.net")
+    .font_src("'self'", "https://fonts.gstatic.com")
+    .connect_src("'self'")
 )
 
 # 2.直接在构造函数中传入 csp，同时保留默认头

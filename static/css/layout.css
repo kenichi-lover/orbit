@@ -5,11 +5,20 @@
     right: 20px;
     transform: translateY(-50%);
     width: 300px;
-    background: rgba(30, 41, 59, 0.8);
+    background: rgba(30, 41, 59, 0.6);
     border-radius: 12px;
     padding: 20px;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); /* 增加深度感 */
+    z-index: 10; /* 确保在卡片之上 */
+    transition: all 0.3s ease;
   }
+
+  /* 悬停时轻微放大，增加交互感 */
+.detail-panel:hover {
+  transform: translateY(-50%) scale(1.02);
+  background: rgba(30, 41, 59, 0.7);
+}
 
   /* 详情面板提示文字 */
 .detail-hint {
@@ -17,6 +26,7 @@
   color: rgba(255, 255, 255, 0.85);
   font-size: 16px;
   line-height: 1.6;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); /* 增强可读性 */
 }
 
   /* 底部缩略图栏 */
@@ -26,13 +36,33 @@
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    gap: 10px;
+    gap: 12px;
+    z-index: 10; /* 确保在卡片之上 */
+    perspective: 1000px; /* 增加3D效果 */
   }
+
   .thumbnail-item {
     width: 80px;
     height: 60px;
     border-radius: 6px;
     object-fit: cover;
     cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); /* 增加深度感 */
+    transform-style: preserve-3d; /* 保持3D效果 */
   }
+
+  .thumbnail-item:hover {
+  transform: translateY(-5px) rotateY(5deg); /* 悬浮+微旋转 */
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
   
+/* 可选：给缩略图加个“玻璃态”边框 */
+.thumbnail-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+}
