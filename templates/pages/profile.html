@@ -1,11 +1,61 @@
-<!-- templates/pages/profile.html -->
 {% extends "base.html" %}
 {% block content %}
-<div style="padding: 100px 20px 40px; color: white; max-width: 1000px; margin: 0 auto;">
-  <h1 style="font-size: 28px; margin-bottom: 24px;">个人中心</h1>
-  <p style="opacity: 0.7; margin-bottom: 40px;">欢迎回来，{{ user.username }}</p>
-  <div id="user-gallery" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px;">
-    <!-- JS 从 /api/images?user_name={{ user.username }} 加载 -->
-  </div>
+<div id="profile-root" data-username="{{ user.username }}" style="display:none"></div>
+<div class="profile-shell">
+  <section class="profile-hero">
+    <div class="profile-avatar">
+      {% if user.avatar_url %}
+        <img src="{{ user.avatar_url }}" alt="{{ user.username }} 的头像" />
+      {% else %}
+        <span>{{ user.username[0]|upper }}</span>
+      {% endif %}
+    </div>
+    <div class="profile-hero-copy">
+      <p class="profile-eyebrow">个人作品集</p>
+      <h1>{{ user.username }}</h1>
+      <p class="profile-summary">这里汇总了你上传的照片、分类与故事内容，方便你随时回看和管理。</p>
+      <div class="profile-actions">
+        <button class="btn-primary" id="profile-upload-btn" type="button">上传新照片</button>
+        <label class="btn-secondary profile-upload-label" for="avatar-upload-input">上传头像</label>
+        <input id="avatar-upload-input" type="file" accept="image/*" hidden />
+        <a class="btn-secondary" href="/">回到相册</a>
+      </div>
+      <p id="avatar-status" class="upload-hint">支持 JPG / PNG / WebP，上传后会立即替换头像。</p>
+    </div>
+  </section>
+
+  <section class="profile-stats" aria-label="个人统计">
+    <div class="stat-card">
+      <strong id="stat-total">0</strong>
+      <span>作品数量</span>
+    </div>
+    <div class="stat-card">
+      <strong id="stat-categories">0</strong>
+      <span>分类数量</span>
+    </div>
+    <div class="stat-card">
+      <strong id="stat-latest">—</strong>
+      <span>最近上传</span>
+    </div>
+  </section>
+
+  <section class="profile-section">
+    <div class="profile-section-head">
+      <h2>最近动态</h2>
+      <p>最近上传的作品会按时间顺序显示在这里。</p>
+    </div>
+    <ol id="activity-timeline" class="activity-timeline"></ol>
+  </section>
+
+  <section class="profile-section">
+    <div class="profile-section-head">
+      <h2>我的照片</h2>
+      <p>你上传的作品会自动显示在这里。</p>
+    </div>
+    <div id="user-gallery" class="profile-gallery"></div>
+    <div id="profile-empty" class="profile-empty">暂无作品，先上传一张吧。</div>
+  </section>
 </div>
+
+<script src="/static/js/profile.js"></script>
 {% endblock %}

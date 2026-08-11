@@ -1,7 +1,7 @@
-from typing import List
+from typing import Annotated, List
 
 from fastapi import (
-    APIRouter, Depends, HTTPException, Query, status
+    APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,6 +36,22 @@ def _check_user_access(current_user: User, target_user_id: int) -> None:
 async def get_me(current_user: User = Depends(get_current_user)):
     """获取当前登录用户信息。"""
     return current_user
+
+
+@router.post("/me/avatar")
+async def upload_my_avatar(
+    file: Annotated[UploadFile, File(...)],
+    current_user: Annotated[User, Depends(get_current_user)] ,
+    session: Annotated[AsyncSession, Depends(get_session)]
+):
+    """上传当前用户头像，保存到 static/avatars 并返回可访问 URL。"""
+    if not file.filename:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No file uploaded")
+
+    file_data = await file.read()
+    avatar_url = await user_service.save_user_avatar(current_user, file_data, file.filename)
+    await session.commit() if session else None
+    return {"success": True, "avatar_url": avatar_url}
 
 
 @router.patch("/me", response_model=UserReadSchema)

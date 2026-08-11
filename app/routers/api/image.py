@@ -34,6 +34,7 @@ def _image_to_public(img: Image) -> ImagePublic:
         category=img.category or "Gallery",
         description=img.description or None,
         tags=img.tags or None,
+        created_at=img.created_at,
         # 如果是 anonymous 则不在公开接口显示作者名
         author_name=img.user_name if img.user_name != "anonymous" else None,
     )

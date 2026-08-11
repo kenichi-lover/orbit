@@ -55,6 +55,7 @@ class ImagePublic(BaseModel):
     category: str
     description: str | None
     tags: str | None
+    created_at: datetime | None = Field(default=None, description="Image upload time")
     author_name: str | None = Field(default=None, description="Username of the image author")
 
 class ImageUpdateSchema(BaseModel):

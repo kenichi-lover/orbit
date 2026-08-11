@@ -335,25 +335,6 @@
   color: rgba(255, 255, 255, 0.8);
 }
 
-.detail-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.action-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background 0.2s;
-}
-
-.action-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
 
 /* ==========================================================
    Thumbnail Bar

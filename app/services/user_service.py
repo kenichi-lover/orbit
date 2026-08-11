@@ -1,3 +1,6 @@
+import re
+from pathlib import Path
+
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,6 +9,47 @@ from sqlmodel import select
 from app.models.user import User
 from app.schemas.user_schema import UserUpdateSchema
 from app.utils.security import hash_password
+
+STATIC_DIR = Path("static")
+AVATAR_DIR = STATIC_DIR / "avatars"
+ALLOWED_AVATAR_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+
+
+def _sanitize_username(username: str) -> str:
+    slug = re.sub(r"[^a-zA-Z0-9._-]+", "_", username).strip("._")
+    return slug or "user"
+
+
+async def save_user_avatar(user: User, file_data: bytes, original_filename: str) -> str:
+    """保存用户头像到 static/avatars，并返回可访问 URL。"""
+    AVATAR_DIR.mkdir(parents=True, exist_ok=True)
+
+    ext = Path(original_filename).suffix.lower()
+    if ext not in ALLOWED_AVATAR_EXTENSIONS:
+        ext = ".png"
+
+    safe_name = _sanitize_username(user.username)
+    avatar_path = AVATAR_DIR / f"{safe_name}{ext}"
+
+    for existing in AVATAR_DIR.glob(f"{safe_name}.*"):
+        if existing != avatar_path:
+            existing.unlink(missing_ok=True)
+
+    avatar_path.write_bytes(file_data)
+    return f"/static/avatars/{avatar_path.name}"
+
+
+def get_user_avatar_url(username: str | None) -> str | None:
+    """根据用户名查找已存在的头像文件。"""
+    if not username:
+        return None
+
+    safe_name = _sanitize_username(username)
+    for ext in sorted(ALLOWED_AVATAR_EXTENSIONS):
+        candidate = AVATAR_DIR / f"{safe_name}{ext}"
+        if candidate.exists():
+            return f"/static/avatars/{candidate.name}"
+    return None
 
 
 async def create_user(
