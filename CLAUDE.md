@@ -102,7 +102,7 @@
 
 | 文件 | 职责 |
 |------|------|
-| `main.js` | 入口：加载 orbit.js + nav.js，初始化全局行为 |
+| `main.js` | 入口：加载 orbit.js + nav.js + filter.js，初始化全局行为 |
 | `orbit.js` | 3D 多层轨道动画、缩略图栏、详情面板、主题切换、Navigator 轨道示意图 |
 | `nav.js` | 页面切换（相册/叙事）、搜索接口联动、客户端图片过滤 |
 | `auth.js` | 登录/注册 Modal 切换、表单提交、JWT 存储、登出 |
@@ -128,7 +128,7 @@
 
 ### 优先级 P2 — 功能扩展
 
-- [ ] **筛选功能** — `#nav-filter` 按钮的下拉面板
+- [x] **筛选功能** — `#nav-filter` 下拉面板（分类 chip + 标签 chip，toggle 切换，重置按钮，`filter.js` 实现）
 - [x] **用户系统** — `#nav-avatar` 登录/注册（JWT + bcrypt）—— auth.js + auth API 已实现
 - [ ] **收藏/下载/分享** — Detail Panel 操作按钮（骨架已就绪）
 - [ ] **头像上传** — 用户头像自定义

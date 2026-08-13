@@ -381,3 +381,31 @@ body.light-theme .navigator {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
+
+/* --- Filter Panel --- */
+#nav-filter-panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 280px;
+  background: rgba(20, 14, 10, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  backdrop-filter: blur(16px);
+  /* ... 阴影和 z-index */
+}
+
+/* 标签样式和选中状态 */
+.filter-chip {
+  padding: 4px 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  cursor: pointer;
+}
+.filter-chip.active {
+  background: rgba(255, 200, 140, 0.2);
+  border-color: rgba(255, 200, 140, 0.5);
+  color: rgba(255, 210, 150, 1);
+}
