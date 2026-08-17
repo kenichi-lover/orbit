@@ -23,7 +23,7 @@ export async function populateFilterPanel() {
     try {
       const res = await fetch('/api/images');
       const data = await res.json();
-      allImagesData = data.images || [];
+      allImagesData = data.items || [];
     } catch (e) {
       console.error(e);
       return;
@@ -33,8 +33,11 @@ export async function populateFilterPanel() {
   const categories = [...new Set(allImagesData.map(img => img.category).filter(Boolean))];
   const tagsSet = new Set();
   allImagesData.forEach(img => {
-    if (img.tags && Array.isArray(img.tags)) {
-      img.tags.forEach(t => tagsSet.add(t));
+    if (img.tags) {
+      img.tags.split(",").forEach(t => {
+        const trimmed = t.trim();
+        if (trimmed) tagsSet.add(trimmed);
+      });
     }
   });
   const tags = [...tagsSet];
@@ -90,7 +93,7 @@ export function applyFilters() {
     
     if (imgData) {
       if (currentCategory && imgData.category !== currentCategory) show = false;
-      if (currentTag && (!imgData.tags || !imgData.tags.includes(currentTag))) show = false;
+      if (currentTag && (!imgData.tags || !imgData.tags.split(",").map(t => t.trim()).includes(currentTag))) show = false;
     }
 
     item.style.display = show ? 'block' : 'none';
@@ -111,7 +114,7 @@ export function applyFilters() {
     
     if (imgData) {
       if (currentCategory && imgData.category !== currentCategory) show = false;
-      if (currentTag && (!imgData.tags || !imgData.tags.includes(currentTag))) show = false;
+      if (currentTag && (!imgData.tags || !imgData.tags.split(",").map(t => t.trim()).includes(currentTag))) show = false;
     }
 
     item.style.display = show ? 'block' : 'none';

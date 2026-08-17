@@ -355,24 +355,20 @@ function showDetail(index) {
         day: "2-digit"
       })
     : "未提供日期";
-  const camera = info.camera || info.camera_model || "未提供设备";
-  const location = info.location || info.place || "未提供地点";
-  const author = info.author_name || "系统作者";
+  const author = info.author_name || "匿名用户";
 
   const titleEl = detail.querySelector(".detail-title");
   const catEl = detail.querySelector(".detail-category");
   const descEl = detail.querySelector(".detail-description");
   const dateEl = detail.querySelector("#detail-date");
-  const cameraEl = detail.querySelector("#detail-camera");
-  const locationEl = detail.querySelector("#detail-location");
+  const authorEl = detail.querySelector("#detail-author");
   const tagsContainer = detail.querySelector(".detail-tags");
 
   if (titleEl) titleEl.textContent = title;
   if (catEl) catEl.textContent = category;
   if (descEl) descEl.textContent = description;
   if (dateEl) dateEl.textContent = createdAt;
-  if (cameraEl) cameraEl.textContent = `${camera} · ${author}`;
-  if (locationEl) locationEl.textContent = location;
+  if (authorEl) authorEl.textContent = author;
 
   if (tagsContainer) {
     tagsContainer.innerHTML = "";
