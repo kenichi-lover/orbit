@@ -42,6 +42,12 @@ def _image_to_public(img: Image) -> ImagePublic:
 
 # ==================== 公开接口 ====================
 
+@router.get("/categories")
+async def list_categories() -> list[str]:
+    """返回所有可用分类枚举值"""
+    return [c.value for c in Category]
+
+
 @router.get("/images", response_model=dict)
 async def list_images(
     p: Annotated[PaginationParams, Depends()],

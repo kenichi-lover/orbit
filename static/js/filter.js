@@ -30,7 +30,32 @@ export async function populateFilterPanel() {
     }
   }
   
-  const categories = [...new Set(allImagesData.map(img => img.category).filter(Boolean))];
+  // 分类选项直接从枚举接口获取，不受数据库中已有图片的限制
+  const catContainer = document.getElementById("filter-categories-container");
+  if (catContainer) {
+    let categories;
+    try {
+      const res = await fetch('/api/categories');
+      categories = await res.json();
+    } catch {
+      // 降级：从已有图片中提取
+      categories = [...new Set(allImagesData.map(img => img.category).filter(Boolean))];
+    }
+
+    catContainer.innerHTML = categories.map(cat =>
+      `<button class="filter-chip ${currentCategory === cat ? 'active' : ''}" data-cat="${cat}">${cat}</button>`
+    ).join('');
+
+    catContainer.querySelectorAll('.filter-chip').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const cat = e.target.getAttribute('data-cat');
+        currentCategory = currentCategory === cat ? "" : cat;
+        populateFilterPanel();
+        applyFilters();
+      });
+    });
+  }
+
   const tagsSet = new Set();
   allImagesData.forEach(img => {
     if (img.tags) {
@@ -41,23 +66,7 @@ export async function populateFilterPanel() {
     }
   });
   const tags = [...tagsSet];
-  
-  const catContainer = document.getElementById("filter-categories-container");
-  if (catContainer) {
-    catContainer.innerHTML = categories.map(cat => 
-      `<button class="filter-chip ${currentCategory === cat ? 'active' : ''}" data-cat="${cat}">${cat}</button>`
-    ).join('');
-    
-    catContainer.querySelectorAll('.filter-chip').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const cat = e.target.getAttribute('data-cat');
-        currentCategory = currentCategory === cat ? "" : cat;
-        populateFilterPanel(); 
-        applyFilters();
-      });
-    });
-  }
-  
+
   const tagContainer = document.getElementById("filter-tags-container");
   if (tagContainer) {
     tagContainer.innerHTML = tags.map(tag => 

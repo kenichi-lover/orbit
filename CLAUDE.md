@@ -1,6 +1,6 @@
 # Orbit Gallery — 项目进度
 
-> 最后更新：2026-08-07
+> 最后更新：2026-08-19
 
 ---
 
@@ -24,7 +24,7 @@
 - [x] FastAPI 项目初始化，`main.py` 挂载静态文件和模板
 - [x] Jinja2 模板继承体系（`base.html` → `pages/*.html`）
 - [x] 静态文件服务 `/static`
-- [x] 配置管理（`app/config/settings.py` 读取 `.env`）
+- [x] 配置管理（`app/config/settings.py` 读取 .env）
 - [x] 异步数据库层（`app/config/database.py`：AsyncEngine + async_sessionmaker + get_session + create_db_and_tables）
 - [x] 数据模型定义
   - `app/models/image.py` — Image 表（filename、storage_path、thumbnail_path、title、description、category、tags、user_id、created_at、updated_at）
@@ -106,8 +106,10 @@
 | `orbit.js` | 3D 多层轨道动画、缩略图栏、详情面板、主题切换、Navigator 轨道示意图 |
 | `nav.js` | 页面切换（相册/叙事）、搜索接口联动、客户端图片过滤 |
 | `auth.js` | 登录/注册 Modal 切换、表单提交、JWT 存储、登出 |
-| `upload.js` | 图片上传 Modal、FormData 提交、上传结果反馈 |
+| `upload.js` | 图片上传 Modal、FormData 提交、上传结果反馈、分类选项异步加载 |
 | `story.js` | 叙事模式渲染、编辑/删除操作、权限校验、XSS 防护 |
+| `filter.js` | 筛选面板：分类 chip + 标签 chip（toggle 切换，重置按钮，`/api/categories` 枚举驱动） |
+| `profile.js` | 个人中心图片列表渲染 |
 
 ---
 
@@ -119,17 +121,15 @@
 - [ ] **惯性旋转** — 松开后保持动量衰减
 - [ ] **滚动缩放** — 鼠标滚轮改变轨道半径/视角
 - [ ] **图片聚焦/飞向中心** — 点击照片后飞入中心并展开 detail panel
-- [x] **速度滑块联动** — `#speed-slider` 控制 `config.rotationSpeed`，实时显示百分比
-- [x] **视角滑块联动** — `#view-slider` 控制 `perspective` 值，实时显示角度
 
-### 优先级 P1 — 数据层
+### 优先级 P1 — 部署准备
 
-- [ ] **DDL 建表** — 在 `main.py` lifespan 中调用 `create_db_and_tables()`
+- [ ] **DDL 建表** — 使用 Alembic 迁移替代 `create_all`，在 `main.py` lifespan 中调用 `alembic upgrade head`
+- [ ] **生产配置** — `.env.example`、Nginx 反向代理、Gunicorn 启动脚本
 
 ### 优先级 P2 — 功能扩展
 
-- [x] **筛选功能** — `#nav-filter` 下拉面板（分类 chip + 标签 chip，toggle 切换，重置按钮，`filter.js` 实现）
-- [x] **用户系统** — `#nav-avatar` 登录/注册（JWT + bcrypt）—— auth.js + auth API 已实现
+- [ ] **蒸汽动画** — `initSteam()` 是空函数占位，咖啡杯蒸汽效果待实现
 - [ ] **收藏/下载/分享** — Detail Panel 操作按钮（骨架已就绪）
 - [ ] **头像上传** — 用户头像自定义
 
@@ -141,7 +141,7 @@
 app/routers/
 ├── api/          # API 端点（JSON 响应）
 │   ├── auth.py   # 注册、登录、JWT 签发
-│   ├── image.py  # 图片 CRUD、搜索、上传
+│   ├── image.py  # 图片 CRUD、搜索、上传、分类枚举
 │   └── user.py   # 用户信息读写
 ├── pages/        # Jinja2 页面渲染（HTML 响应）
 │   ├── index.py  # 首页（/）

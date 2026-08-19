@@ -1,5 +1,16 @@
-function openUploadModal() {
+async function openUploadModal() {
   document.getElementById('upload-modal')?.classList.add('is-open');
+  // 异步加载分类选项
+  const sel = document.getElementById('upload-category');
+  if (sel) {
+    try {
+      const res = await fetch('/api/categories');
+      const cats = await res.json();
+      sel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+    } catch {
+      sel.innerHTML = '<option value="Gallery">Gallery</option>';
+    }
+  }
 }
 
 function closeUploadModal() {
