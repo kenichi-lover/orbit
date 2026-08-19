@@ -18,7 +18,7 @@ Path(__file__)              # /project/alembic/env.py
     .parent                 # /project/（项目根目录）
 
 """
-sys.path.append(str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app.config.settings import settings
 
 # 导入 SQLModel 模型, 确保所有模型，否则不会生成迁移
