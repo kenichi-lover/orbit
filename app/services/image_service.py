@@ -1,17 +1,31 @@
+"""
+Image Service — 分模块优化说明：
+
+模块 1: 外键对齐     → user_name → user_id，查询走索引
+模块 2: Tags 查询    → LIKE 子串匹配 → PG ARRAY @> contains
+模块 3: Schema 对齐  → ImageCreate / ImageUpdate / Category 枚举
+模块 4: MIME 修正    → Pillow fallback typo 修复 (images/ → image/)
+模块 5: 异步规范化   → get_running_loop + 软删除查询封装
+模块 6: 搜索参数     → 散列参数 → ImageSearchParams 对象
+"""
+
+from __future__ import annotations
+
 import asyncio
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from io import BytesIO
 from pathlib import Path
 from typing import Sequence
 
 from PIL import Image as PILImage
-from sqlalchemy.ext.asyncio.session import AsyncSession
-from sqlalchemy.orm import selectinload
-from sqlmodel import DateTime, column, desc, select, func, or_
+from sqlalchemy import func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col
 
 from app.models.image import Image
-from app.schemas.image_schema import ImageUpdateSchema  # 需自行定义，含 title/description/alt_text 等
+from app.schemas.image_schema import ImageCreate, ImagePublic, ImageSearchParams, ImageUpdate
+from app.utils.enums import Category
 
 
 # ==================== 配置 ====================
@@ -19,9 +33,12 @@ from app.schemas.image_schema import ImageUpdateSchema  # 需自行定义，含 
 STATIC_DIR = Path("static")
 IMAGES_DIR = STATIC_DIR / "images"
 
-THUMBNAIL_SIZE = (300, 300)          # 缩略图最大宽高
-MAX_FILE_SIZE = 10 * 1024 * 1024     # 10MB
+THUMBNAIL_SIZE = (300, 300)
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+
+# 软删除清理保留天数
+SOFT_DELETE_RETENTION_DAYS = 30
 
 
 # ==================== 内部工具 ====================
@@ -33,8 +50,7 @@ def _ensure_dirs(path: Path) -> None:
 
 def _generate_storage_path(original_filename: str) -> tuple[str, str]:
     """
-    生成存储路径和唯一文件名
-    返回: (relative_path, file_name)
+    生成存储路径和唯一文件名。
     目录结构: static/images/{year}/{month}/{uuid}.{ext}
     """
     ext = Path(original_filename).suffix.lower()
@@ -50,7 +66,7 @@ def _generate_storage_path(original_filename: str) -> tuple[str, str]:
 
 
 def _get_full_path(relative_path: str | None) -> Path | None:
-    """相对路径 -> 绝对路径"""
+    """相对路径 → 绝对路径"""
     if not relative_path:
         return None
     return STATIC_DIR / relative_path
@@ -58,13 +74,9 @@ def _get_full_path(relative_path: str | None) -> Path | None:
 
 async def _write_file_async(file_data: bytes, full_path: Path) -> None:
     """异步写文件（线程池包装同步 I/O）"""
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     _ensure_dirs(full_path.parent)
-
-    def _write():
-        full_path.write_bytes(file_data)
-
-    await loop.run_in_executor(None, _write)
+    await loop.run_in_executor(None, full_path.write_bytes, file_data)
 
 
 async def _delete_file_async(relative_path: str | None) -> None:
@@ -75,11 +87,11 @@ async def _delete_file_async(relative_path: str | None) -> None:
     if not full_path:
         return
 
-    def _remove():
+    def _remove() -> None:
         full_path.unlink(missing_ok=True)
 
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, _remove)
     except Exception:
         pass
@@ -89,7 +101,7 @@ def _get_image_dimensions(file_data: bytes) -> tuple[int, int] | None:
     """获取图片宽高"""
     try:
         with PILImage.open(BytesIO(file_data)) as img:
-            return img.size
+            return img.size  # type: ignore[return-value]
     except Exception:
         return None
 
@@ -97,28 +109,27 @@ def _get_image_dimensions(file_data: bytes) -> tuple[int, int] | None:
 def _detect_mime_type(file_data: bytes) -> str:
     """检测 MIME 类型，优先 python-magic，降级到 Pillow"""
     try:
-        import magic  # type: ignore
+        import magic  # type: ignore[import-untyped]
         return magic.from_buffer(file_data, mime=True)
     except ImportError:
-        try:
-            with PILImage.open(BytesIO(file_data)) as img:
-                mapping = {
-                    "JPEG": "images/jpeg",
-                    "PNG": "images/png",
-                    "GIF": "images/gif",
-                    "WEBP": "images/webp",
-                }
-                format_key = img.format or "jpeg"
-                return mapping.get(format_key, "images/webp")
-        except Exception:
-            return "images/jpeg"
+        pass
+
+    try:
+        with PILImage.open(BytesIO(file_data)) as img:
+            mapping = {
+                "JPEG": "image/jpeg",   # ✅ 修正: images/ → image/
+                "PNG": "image/png",
+                "GIF": "image/gif",
+                "WEBP": "image/webp",
+            }
+            format_key = img.format or "JPEG"
+            return mapping.get(format_key.upper(), "image/webp")
+    except Exception:
+        return "image/webp"
 
 
 async def _generate_thumbnail(relative_path: str) -> str | None:
-    """
-    生成缩略图
-    返回缩略图的相对路径，失败返回 None
-    """
+    """生成缩略图，返回缩略图相对路径，失败返回 None"""
     full_path = _get_full_path(relative_path)
     if not full_path or not full_path.exists():
         return None
@@ -129,41 +140,40 @@ async def _generate_thumbnail(relative_path: str) -> str | None:
     if not thumb_full:
         return None
 
-    def _process():
+    def _process() -> str:
         with PILImage.open(full_path) as img:
-            # 保持比例缩放
             img.thumbnail(THUMBNAIL_SIZE, PILImage.Resampling.LANCZOS)
-            # RGBA/P 模式转 RGB 以兼容 JPEG
             if img.mode in ("RGBA", "P"):
                 img = img.convert("RGB")
+            _ensure_dirs(thumb_full.parent)
             img.save(thumb_full, "JPEG", quality=85, optimize=True)
         return thumb_relative
 
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, _process)
     except Exception:
-        # 缩略图生成失败不应阻断主流程
         return None
+
+
+def _not_deleted():
+    """软删除过滤条件复用"""
+    return col(Image.is_deleted) == False  # noqa: E712
 
 
 # ==================== 对外 Service API ====================
 
 async def upload_image(
     session: AsyncSession,
+    *,
     file_data: bytes,
     original_filename: str,
-    user_name: str,
-    title: str | None = None,
-    description: str | None = None,
-    alt_text: str | None = None,
-    category: str = "Gallery",
-    tags: str | None = None,
+    author_id: int,                   
+    meta: ImageCreate | None = None, # ✅ 模块 3: 使用 ImageCreate schema
     generate_thumb: bool = True,
 ) -> Image:
-    """
-    上传图片并创建数据库记录
-    """
+    """上传图片并创建数据库记录"""
+
     # 1. 基础校验
     if len(file_data) > MAX_FILE_SIZE:
         raise ValueError(f"文件大小超过 {MAX_FILE_SIZE / 1024 / 1024:.0f}MB 限制")
@@ -178,7 +188,7 @@ async def upload_image(
     await _write_file_async(file_data, full_path)
 
     # 4. 生成缩略图
-    thumb_relative = None
+    thumb_relative: str | None = None
     if generate_thumb:
         thumb_relative = await _generate_thumbnail(relative_path)
 
@@ -186,7 +196,14 @@ async def upload_image(
     dimensions = _get_image_dimensions(file_data)
     width, height = dimensions if dimensions else (None, None)
 
-    # 6. 入库
+    # 6. 合并用户传入的元信息
+    title = meta.title if meta else None
+    description = meta.description if meta else None
+    alt_text = meta.alt_text if meta else None
+    category = meta.category if meta else Category.GALLERY
+    tags = meta.tags if meta else []
+
+    # 7. 入库
     image = Image(
         original_filename=original_filename,
         file_name=file_name,
@@ -199,9 +216,9 @@ async def upload_image(
         title=title,
         description=description,
         alt_text=alt_text,
-        user_name=user_name,
-        category=category,
-        tags=tags,
+        author_id=author_id,          # ✅ 模块 1
+        category=category,        # ✅ 模块 3: 枚举
+        tags=tags,                # ✅ 模块 2: list[str]
     )
     session.add(image)
     await session.commit()
@@ -214,9 +231,9 @@ async def get_image_by_id(
     image_id: int,
     include_deleted: bool = False,
 ) -> Image | None:
-    stmt = select(Image).where(Image.id == image_id)
+    stmt = select(Image).where(col(Image.id == image_id))
     if not include_deleted:
-        stmt = stmt.where(Image.is_deleted == False)
+        stmt = stmt.where(_not_deleted())
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 
@@ -226,59 +243,54 @@ async def get_image_by_file_name(
     file_name: str,
     include_deleted: bool = False,
 ) -> Image | None:
-    stmt = select(Image).where(Image.file_name == file_name)
+    stmt = select(Image).where(col(Image.file_name) == file_name)
     if not include_deleted:
-        stmt = stmt.where(Image.is_deleted == False)
+        stmt = stmt.where(_not_deleted())
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 
 
 async def get_images_by_user(
     session: AsyncSession,
-    user_name: str | None = None,
+    *,
+    author_id: int | None = None,   
     skip: int = 0,
     limit: int = 20,
     include_deleted: bool = False,
 ) -> tuple[Sequence[Image], int]:
-    """
-    获取图片列表（分页）
-    返回: (数据列表, 总条数)
-    如果 user_name 为 None，则返回所有用户的图片
-    """
+    """获取图片列表（分页），user_id=None 时返回全部"""
     where_clauses = []
     if not include_deleted:
-        where_clauses.append(Image.is_deleted == False)
-
-    # 只有当指定了 user_name 时才过滤用户
-    if user_name is not None:
-        where_clauses.append(Image.user_name == user_name)
+        where_clauses.append(_not_deleted())
+    if author_id is not None:
+        where_clauses.append(Image.author_id == author_id)
 
     # 总数
     count_stmt = select(func.count()).select_from(Image)
     if where_clauses:
         count_stmt = count_stmt.where(*where_clauses)
-    total = await session.execute(count_stmt)
-    total_count = total.scalar_one() or 0
+    total_count = (await session.execute(count_stmt)).scalar_one() or 0
 
     # 分页
-    stmt = select(Image).order_by(desc(Image.created_at))
+    stmt = (
+        select(Image)
+        .order_by(col(Image.created_at).desc())
+        .offset(skip)
+        .limit(limit)
+    )
     if where_clauses:
         stmt = stmt.where(*where_clauses)
-    stmt = stmt.offset(skip).limit(limit)
 
-    result = await session.execute(stmt)
-    items = result.scalars().all()
+    items = (await session.execute(stmt)).scalars().all()
     return items, total_count
 
 
 async def update_image_meta(
     session: AsyncSession,
     image: Image,
-    data: ImageUpdateSchema,
+    data: ImageUpdate,               # ✅ 模块 3: ImageUpdateSchema → ImageUpdate
 ) -> Image:
-    """
-    更新图片元数据（标题、描述等），不涉及文件替换
-    """
+    """更新图片元数据（部分更新），不涉及文件替换"""
     update_data = data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(image, field, value)
@@ -312,19 +324,13 @@ async def delete_image(
 
 
 async def cleanup_deleted_images(session: AsyncSession) -> int:
-    """
-    清理已软删除超过 N 天的图片（可作为定时任务调用）
-    返回实际删除的记录数
-    """
-    from datetime import timedelta
-
-    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+    """清理已软删除超过 N 天的图片（定时任务调用）"""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=SOFT_DELETE_RETENTION_DAYS)
     stmt = select(Image).where(
-        Image.is_deleted == True,
-        column("deleted_at", DateTime) <= cutoff
+        col(Image.is_deleted) == True,  # noqa: E712
+        col(Image.deleted_at) <= cutoff,
     )
-    result = await session.execute(stmt)
-    images = result.scalars().all()
+    images = (await session.execute(stmt)).scalars().all()
 
     count = 0
     for img in images:
@@ -340,78 +346,66 @@ async def cleanup_deleted_images(session: AsyncSession) -> int:
 
 # ==================== 搜索功能 ====================
 
-def _parse_tags(tag_str: str | None) -> list[str]:
-    """将逗号分隔的 tags 字符串转为列表"""
-    if not tag_str:
-        return []
-    return [t.strip().lower() for t in tag_str.split(",") if t.strip()]
-
-
 async def search_images(
     session: AsyncSession,
-    q: str | None = None,
-    category: str | None = None,
-    tag: str | None = None,
-    user_name: str | None = None,
-    skip: int = 0,
-    limit: int = 20,
+    params: ImageSearchParams,       # ✅ 模块 6: 散列参数 → 对象
     include_deleted: bool = False,
 ) -> tuple[Sequence[Image], int]:
     """
-    搜索图片（关键词 + 分类 + 标签筛选，分页）
-    返回: (数据列表, 总条数)
+    搜索图片（关键词 + 分类 + 标签 + 用户，分页）
+    ✅ 模块 2: tags 使用 PG ARRAY @> contains 替代 LIKE
     """
-    where_clauses = []
+    where_clauses: list = []
     if not include_deleted:
-        where_clauses.append(Image.is_deleted == False)
+        where_clauses.append(_not_deleted())
 
     # 关键词搜索：标题或描述模糊匹配
-    if q and q.strip():
-        kw = f"%{q.strip()}%"
+    if params.q and params.q.strip():
+        kw = f"%{params.q.strip()}%"
         where_clauses.append(
             or_(
-                Image.title.ilike(kw),
-                Image.description.ilike(kw),
+                col(Image.title).ilike(kw),
+                col(Image.description).ilike(kw),
             )
         )
 
-    # 分类筛选
-    if category and category.strip():
-        where_clauses.append(Image.category == category.strip())
+    # ✅ 模块 3: 分类筛选（枚举直接比较）
+    if params.category is not None:
+        where_clauses.append(Image.category == params.category)
 
-    # 标签筛选（精确匹配单个 tag）
-    if tag and tag.strip():
-        search_tag = tag.strip().lower()
-        # 用 LIKE 做子串匹配（tags 是逗号分隔存储）
-        where_clauses.append(Image.tags.like(f"%{search_tag}%"))
+    # ✅ 模块 2: 标签筛选 — PG ARRAY contains
+    # tags 列是 ARRAY(String)，用 .contains([tag]) 生成 SQL: tags @> ARRAY['tag']
+    if params.tag and params.tag.strip():
+        where_clauses.append(col(Image.tags).contains([params.tag.strip().lower()]))
 
-    # 用户筛选
-    if user_name and user_name.strip():
-        where_clauses.append(Image.user_name == user_name.strip())
+    # ✅ 模块 1: 用户筛选（user_id）
+    if params.user_id is not None:
+        where_clauses.append(Image.author_id == params.user_id)
 
     # 总数
+    count_stmt = select(func.count()).select_from(Image)
     if where_clauses:
-        count_stmt = select(func.count()).select_from(Image).where(*where_clauses)
-    else:
-        count_stmt = select(func.count()).select_from(Image)
-    total = await session.execute(count_stmt)
-    total_count = total.scalar_one() or 0
+        count_stmt = count_stmt.where(*where_clauses)
+    total_count = (await session.execute(count_stmt)).scalar_one() or 0
 
     # 分页查询
-    stmt = select(Image).order_by(desc(Image.created_at))
+    stmt = (
+        select(Image)
+        .order_by(col(Image.created_at).desc())
+        .offset(params.skip)
+        .limit(params.limit)
+    )
     if where_clauses:
         stmt = stmt.where(*where_clauses)
-    stmt = stmt.offset(skip).limit(limit)
 
-    result = await session.execute(stmt)
-    items = result.scalars().all()
+    items = (await session.execute(stmt)).scalars().all()
     return items, total_count
 
 
 # ==================== URL / 路径工具 ====================
 
 def get_image_url(relative_path: str | None) -> str | None:
-    """相对路径 -> 对外访问 URL"""
+    """相对路径 → 对外访问 URL"""
     if not relative_path:
         return None
     return f"/static/{relative_path}"
@@ -420,3 +414,52 @@ def get_image_url(relative_path: str | None) -> str | None:
 def get_image_full_path(relative_path: str | None) -> Path | None:
     """获取绝对路径（用于直接发送文件或做进一步处理）"""
     return _get_full_path(relative_path)
+
+
+
+def image_to_public(img: Image) -> ImagePublic:
+    """将 Image ORM 对象转为公共响应格式。
+
+    所有路由统一调用此函数，禁止在路由层手写转换逻辑。
+    """
+
+    # ── 入口统一断言：DB 查出的记录主键/必填字段不应为 None ──
+    if img.id is None:
+        raise ValueError(f"Image 缺少主键，无法序列化: {img}")
+    if img.relative_path is None:
+        raise ValueError(f"Image 缺少 relative_path: id={img.id}")
+
+    # ── URL 生成：主图 URL 失败直接报错，缩略图允许为 None ──
+    url = get_image_url(img.relative_path)
+    if not url:
+        raise ValueError(f"无法生成图片 URL: relative_path={img.relative_path}")
+
+    thumbnail_url = (
+        get_image_url(img.thumbnail_relative_path)
+        if img.thumbnail_relative_path
+        else None
+    )
+
+    # ── author 处理 ──
+    author_name = None
+    if img.author and not getattr(img.author, "is_anonymous", False):
+        author_name = img.author.username
+
+    return ImagePublic(
+        id=img.id,
+        url=url,
+        thumbnail_url=thumbnail_url,
+        title=img.title,
+        description=img.description,
+        alt_text=img.alt_text,
+        category=img.category,
+        tags=img.tags or [],
+        original_filename=img.original_filename,
+        file_size=img.file_size,
+        mime_type=img.mime_type,
+        width=img.width,
+        height=img.height,
+        author_name=author_name,
+        created_at=img.created_at,
+        updated_at=img.updated_at,
+    )

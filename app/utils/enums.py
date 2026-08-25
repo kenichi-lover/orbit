@@ -10,3 +10,6 @@ class Category(str, Enum):
     PORTRAIT = "Portrait"
     ARCHITECTURE = "Architecture"
     ABSTRACT = "Abstract"
+
+    def __str__(self) -> str:
+        return self.value

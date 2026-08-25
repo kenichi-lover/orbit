@@ -1,79 +1,139 @@
+"""
+Image Schema — 分模块优化：
+
+模块 1: 类型修正   → category 绑定 Category 枚举，tags 改为 list[str]
+模块 2: 继承优化   → ImagePublic / ImageUpdate 继承 ImageBase，消除重复
+模块 3: 响应补全   → ImagePublic 补全 thumbnail_url / file_size / mime_type 等
+模块 4: 新增       → ImageCreate（上传时校验元信息）
+模块 5: 搜索对齐   → ImageSearchParams.user_name → user_id
+"""
+
+from __future__ import annotations
+
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from sqlmodel import Field, SQLModel
+
+from app.utils.enums import Category
 
 
-class ImageBaseSchema(BaseModel):
-    """Base schema for image metadata shared across create/read/update flows."""
+# ══════════════════════════════════════════════
+# 模块 1: 类型修正 + 基础字段
+# ══════════════════════════════════════════════
 
-    title: str | None = Field(default=None, max_length=100, description="Title of the image")
-    description: str | None = Field(default=None, max_length=500, description="Description of the image")
-    alt_text: str | None = Field(default=None, max_length=255, description="Alt text for accessibility")
-    category: str = Field(default="Gallery", max_length=100, description="Image category/album")
-    tags: str | None = Field(default=None, max_length=500, description="Comma-separated tags")
+class ImageBase(SQLModel):
+    """用户可控的业务字段。
 
+    继承者：ImageCreate / ImageUpdate / ImagePublic
+    ⚠️ 不包含 file_name / relative_path 等内部存储字段
+    """
 
-class ImageCreateSchema(ImageBaseSchema):
-    """Schema for creating a new image."""
+    title: str | None = Field(default=None, max_length=100)
+    description: str | None = Field(default=None, max_length=500)
+    alt_text: str | None = Field(default=None, max_length=255)
 
-    original_filename: str = Field(..., min_length=1, max_length=255, description="Original filename of the image")
-    file_name: str = Field(..., min_length=1, max_length=255, description="Stored filename")
-    relative_path: str = Field(..., min_length=1, max_length=500, description="Storage path of the image")
-    thumbnail_relative_path: str | None = Field(default=None, min_length=1, max_length=500, description="Thumbnail path of the image")
-    file_size: int = Field(default=0, ge=0, description="File size in bytes")
-    mime_type: str = Field(default="image/jpeg", max_length=100, description="Image MIME type")
-    width: int | None = Field(default=None, ge=0)
-    height: int | None = Field(default=None, ge=0)
-    user_name: str = Field(..., description="Username of the uploader")
+    # ✅ 模块 1: category 绑定枚举（原来是自由 str）
+    category: Category = Field(default=Category.GALLERY)
+
+    # ✅ 模块 1: tags 改为 list[str]（原来是逗号分隔的 str）
+    tags: list[str] = Field(default_factory=list)
 
 
-class ImageReadSchema(ImageBaseSchema):
-    """Schema for reading an image."""
+# ══════════════════════════════════════════════
+# 模块 4: 新增 — 创建请求体
+# ══════════════════════════════════════════════
+
+class ImageCreate(ImageBase):
+    """上传图片时前端传入的元信息。
+
+    文件本身走 multipart/form-data 的 UploadFile，
+    这里只校验随文件一起提交的描述性字段。
+    """
+
+    # 如果未来需要前端指定分类 / 标签，直接继承 Base 即可
+    # 当前 Base 字段已足够，无需额外定义
+    pass
+
+
+# ══════════════════════════════════════════════
+# 模块 2 + 3: 公开响应（继承 + 补全）
+# ══════════════════════════════════════════════
+
+class ImagePublic(ImageBase):
+    """前端可见的图片信息。脱敏、精简。
+
+    ✅ 模块 2: 继承 ImageBase，消除 title/description/tags 重复定义
+    ✅ 模块 3: 补全 thumbnail_url / file_size / mime_type / width / height
+    ✅ 修正: title 允许 None（与模型层一致）
+    """
 
     id: int
+
+    # ── 存储 URL（由 relative_path 拼接，路由层赋值）──
+    url: str
+    thumbnail_url: str | None = None
+
+    # ── 文件元数据（只读，服务端计算）──
     original_filename: str
-    file_name: str
-    relative_path: str
-    thumbnail_relative_path: str | None
     file_size: int
     mime_type: str
-    width: int | None
-    height: int | None
+    width: int | None = None
+    height: int | None = None
+
+    # ── 关联用户（脱敏：只返回用户名）──
+    author_name: str | None = None
+
+    # ── 时间戳 ──
     created_at: datetime
-    updated_at: datetime | None
-    user_name: str
-
-    model_config = ConfigDict(from_attributes=True)
+    updated_at: datetime | None = None
 
 
-class ImagePublic(BaseModel):
-    """Public-facing image payload used in API responses."""
+# ══════════════════════════════════════════════
+# 模块 2: 更新（继承 + 部分更新）
+# ══════════════════════════════════════════════
 
-    id: int
-    url: str = Field(..., description="Full URL to access the image")
-    title: str
-    category: str
-    description: str | None
-    tags: str | None
-    created_at: datetime | None = Field(default=None, description="Image upload time")
-    author_name: str | None = Field(default=None, description="Username of the image author")
+class ImageUpdate(SQLModel):
+    """部分更新：所有字段可选，传什么改什么。
 
-class ImageUpdateSchema(BaseModel):
-    """Schema for updating an image."""
+    ⚠️ 不继承 ImageBase，因为需要所有字段都是 Optional，
+       而 Base 中 category 有默认值、tags 有 default_factory，
+       语义不同：
+         - Base.tags = []       → 创建时默认空列表
+         - Update.tags = None   → 不修改
+         - Update.tags = []     → 清空所有标签
+    """
 
-    title: str | None = Field(default=None, max_length=100, description="Title of the image")
-    description: str | None = Field(default=None, max_length=500, description="Description of the image")
-    alt_text: str | None = Field(default=None, max_length=255, description="Alt text for accessibility")
-    category: str | None = Field(default=None, max_length=100, description="Image category/album")
-    tags: str | None = Field(default=None, max_length=500, description="Comma-separated tags")
+    title: str | None = None
+    description: str | None = None
+    alt_text: str | None = None
+
+    # ✅ 模块 1: 枚举类型
+    category: Category | None = None
+
+    # ✅ 模块 1: list[str] 类型
+    # None = 不修改, [] = 清空
+    tags: list[str] | None = None
 
 
-class ImageSearchParams(BaseModel):
-    """Query parameters for searching images."""
+# ══════════════════════════════════════════════
+# 模块 5: 搜索参数（对齐模型层）
+# ══════════════════════════════════════════════
 
-    q: str | None = Field(default=None, max_length=200, description="Keyword to search in title/description")
-    category: str | None = Field(default=None, max_length=100, description="Filter by category")
-    tag: str | None = Field(default=None, max_length=100, description="Filter by tag (exact match)")
-    user_name: str | None = Field(default=None, max_length=50, description="Filter by author username")
+class ImageSearchParams(SQLModel):
+    """URL 查询参数（Query 参数）"""
+
+    q: str | None = Field(default=None, max_length=200)
+
+    # ✅ 模块 1: 枚举过滤
+    category: Category | None = Field(default=None)
+
+    # ✅ 模块 1: 单标签过滤（模型层 tags 是 JSON list，
+    #    查询时用 contains 匹配单个标签即可）
+    tag: str | None = Field(default=None, max_length=100)
+
+    # ✅ 模块 5: user_name → user_id（与模型层外键对齐）
+    user_id: int | None = Field(default=None, ge=1)
+
+    # ── 分页 ──
     skip: int = Field(default=0, ge=0)
     limit: int = Field(default=20, ge=1, le=100)

@@ -2,6 +2,7 @@
   'use strict';
 
   const profileUsername = document.getElementById('profile-root')?.dataset.username || '';
+  const profileUserId = parseInt(document.getElementById('profile-root')?.dataset.userId || '0', 10);
   const avatarInput = document.getElementById('avatar-upload-input');
   const avatarStatus = document.getElementById('avatar-status');
   const timeline = document.getElementById('activity-timeline');
@@ -26,7 +27,7 @@
 
     try {
       const res = await fetch(
-        `/api/images?user_name=${encodeURIComponent(profileUsername)}&limit=12`,
+        `/api/images?author_id=${encodeURIComponent(profileUserId)}&limit=12`,
         { credentials: 'include' }
       );
       if (!res.ok) throw new Error('加载失败');
@@ -86,7 +87,9 @@
             <p>${escapeHtml(item.description || '这张照片还没有写简介。')}</p>
             <div class="profile-meta">
               <span class="profile-chip">${escapeHtml(item.category || 'Gallery')}</span>
-              ${item.tags ? `<span class="profile-chip">${escapeHtml(item.tags)}</span>` : ''}
+              ${item.tags && Array.isArray(item.tags) && item.tags.length
+                ? `<span class="profile-chip">${escapeHtml(item.tags.map(t => `#${t}`).join(' '))}</span>`
+                : ''}
             </div>
           </div>
         `;

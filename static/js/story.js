@@ -67,9 +67,8 @@ window._storyRender = async function renderStoryTimeline(query = "") {
         const isEven = index % 2 === 0;
 
         // 处理标签：分割、去空、转义
-        const tagsList = (img.tags || 'Photography')
-            .split(',')
-            .map(t => escapeHtml(t.trim()))
+        const tagsList = (Array.isArray(img.tags) ? img.tags : (typeof img.tags === 'string' ? img.tags.split(',') : []))
+            .map(t => escapeHtml(String(t).trim()))
             .filter(Boolean);
         
         const tagsHtml = tagsList.map(t => 
@@ -78,7 +77,7 @@ window._storyRender = async function renderStoryTimeline(query = "") {
 
         // 权限校验（使用循环外的 currentUser）
         const isSuperuser = !!currentUser && currentUser.is_superuser === true;
-        const authorName = img.author_name || img.user_name || null;
+        const authorName = img.author_name || null;
         const isOwner = !!currentUser && !!currentUser.username && !!authorName && authorName === currentUser.username;
         const canManage = isOwner || isSuperuser;
 
@@ -101,7 +100,7 @@ window._storyRender = async function renderStoryTimeline(query = "") {
         const safeTitle = escapeHtml(img.title);
         const safeDesc = escapeHtml(img.description || '');
         const safeCat = escapeHtml(img.category || 'Gallery');
-        const safeTagsStr = escapeHtml(img.tags || 'Photography');
+        const safeTagsStr = Array.isArray(img.tags) ? img.tags.join(', ') : (img.tags || 'Photography');
 
         return `
             <div style="background: rgba(30, 30, 30, 0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; display: flex; flex-direction: ${isEven ? 'row' : 'row-reverse'}; gap: 24px; align-items: center; transition: transform 0.3s;" class="story-item" id="story-item-${img.id}">
@@ -154,18 +153,21 @@ function cancelEditStory(id) {
 }
 
 // 保存修改
-// 注意：这里保持了原有的 POST 方法。如果后端支持 RESTful 规范，建议改为 PATCH 方法。
 async function saveStory(id) {
     const title = document.getElementById(`edit-title-${id}`)?.value || '';
     const description = document.getElementById(`edit-desc-${id}`)?.value || '';
     const category = document.getElementById(`edit-cat-${id}`)?.value || '';
     const tagsStr = document.getElementById(`edit-tags-${id}`)?.value || '';
+    const tagsArray = tagsStr
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean);
 
     try {
         const res = await fetch(`/api/images/${id}`, {
-            method: 'POST', 
+            method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, description, category, tags: tagsStr }),
+            body: JSON.stringify({ title, description, category, tags: tagsArray }),
             credentials: 'include',
         });
 

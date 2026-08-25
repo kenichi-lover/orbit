@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config.settings import settings
 from app.config.database import get_session
 from app.schemas.user_schema import (
-    UserCreateSchema, UserLoginSchema, UserReadSchema, TokenResponse
+    UserCreate, UserLogin, UserPublic, TokenResponse
     )
 from app.utils.limiter import limiter
 from app.utils.jwt import create_access_token
@@ -80,7 +80,7 @@ async def _authenticate_user(
 async def register(
     request: Request,
     response: Response,
-    data: UserCreateSchema,
+    data: UserCreate,
     session: AsyncSession = Depends(get_session),
 ):
     """
@@ -113,7 +113,7 @@ async def register(
 async def login(
     request: Request,
     response: Response,
-    data: UserLoginSchema,
+    data: UserLogin,
     session: AsyncSession = Depends(get_session),
 ):
     """用户登录，返回 JWT token。"""

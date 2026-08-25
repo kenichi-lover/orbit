@@ -58,12 +58,11 @@ export async function populateFilterPanel() {
 
   const tagsSet = new Set();
   allImagesData.forEach(img => {
-    if (img.tags) {
-      img.tags.split(",").forEach(t => {
-        const trimmed = t.trim();
-        if (trimmed) tagsSet.add(trimmed);
-      });
-    }
+    const tagList = Array.isArray(img.tags) ? img.tags : (typeof img.tags === 'string' ? img.tags.split(',').map(t => t.trim()) : []);
+    tagList.forEach(t => {
+      const trimmed = t.trim();
+      if (trimmed) tagsSet.add(trimmed);
+    });
   });
   const tags = [...tagsSet];
 
@@ -102,7 +101,7 @@ export function applyFilters() {
     
     if (imgData) {
       if (currentCategory && imgData.category !== currentCategory) show = false;
-      if (currentTag && (!imgData.tags || !imgData.tags.split(",").map(t => t.trim()).includes(currentTag))) show = false;
+      if (currentTag && (!imgData.tags || !(Array.isArray(imgData.tags) ? imgData.tags : (typeof imgData.tags === 'string' ? imgData.tags.split(',').map(t => t.trim()) : [])).includes(currentTag))) show = false;
     }
 
     item.style.display = show ? 'block' : 'none';
@@ -123,7 +122,7 @@ export function applyFilters() {
     
     if (imgData) {
       if (currentCategory && imgData.category !== currentCategory) show = false;
-      if (currentTag && (!imgData.tags || !imgData.tags.split(",").map(t => t.trim()).includes(currentTag))) show = false;
+      if (currentTag && (!imgData.tags || !(Array.isArray(imgData.tags) ? imgData.tags : (typeof imgData.tags === 'string' ? imgData.tags.split(',').map(t => t.trim()) : [])).includes(currentTag))) show = false;
     }
 
     item.style.display = show ? 'block' : 'none';

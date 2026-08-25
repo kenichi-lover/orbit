@@ -22,7 +22,7 @@ async def profile_page(
 
     profile_user = user.to_dict() if user else None
     if profile_user is not None:
-        profile_user["avatar_url"] = get_user_avatar_url(user.username)
+        profile_user["avatar_url"] = get_user_avatar_url(user)
 
     return templates.TemplateResponse(
         request,

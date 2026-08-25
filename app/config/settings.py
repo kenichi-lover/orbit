@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     # 如果未来需要 refresh token
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 30  # 30 天
     
+    # 上传文件大小限制（单位：字节），默认 10MB
+    MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10 MB
+    
     model_config = SettingsConfigDict(
         env_file=".env", 
         env_file_encoding="utf-8")

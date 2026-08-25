@@ -372,9 +372,9 @@ function showDetail(index) {
 
   if (tagsContainer) {
     tagsContainer.innerHTML = "";
-    const tagsList = info.tags
-      ? info.tags.split(",").map((tag) => tag.trim()).filter(Boolean)
-      : [];
+    const tagsList = Array.isArray(info.tags)
+      ? info.tags
+      : (typeof info.tags === 'string' ? info.tags.split(',').map((t) => t.trim()).filter(Boolean) : []);
 
     if (tagsList.length > 0) {
       tagsList.forEach((tag) => {

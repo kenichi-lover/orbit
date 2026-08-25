@@ -119,11 +119,11 @@ orbit/
 | `/api/auth/logout` | POST | 登出 |
 | `/api/categories` | GET | 返回所有分类枚举值 |
 | `/api/images` | GET | 图片列表（分页） |
-| `/api/images/upload` | POST | 图片上传（支持匿名） |
+| `/api/images/upload` | POST | 图片上传（需认证） |
 | `/api/images/{id}` | GET | 图片详情 |
-| `/api/images/{id}` | POST | 更新图片元数据 |
-| `/api/images/{id}` | DELETE | 删除图片（软删/硬删） |
-| `/api/search` | GET | 搜索（关键词 + 分类 + 标签） |
+| `/api/images/{id}` | PUT | 更新图片元数据（需认证） |
+| `/api/images/{id}` | DELETE | 删除图片（软删/硬删，需认证） |
+| `/api/search` | GET | 搜索（关键词 + 分类 + 标签 + 作者 user_id） |
 | `/api/me` | GET | 当前用户信息 |
 | `/health` | GET | 健康检查 |
 
@@ -214,9 +214,9 @@ orbit/
 | title | str \| None | 标题 |
 | description | str \| None | 描述 |
 | alt_text | str \| None | 无障碍 alt 属性 |
-| category | str | 分类（默认 "Gallery"） |
-| tags | str \| None | 逗号分隔标签 |
-| user_name | str (FK) | 上传者用户名 |
+| category | `category` ENUM | 分类（GALLERY / TRAVEL / NATURE / PORTRAIT / ARCHITECTURE / ABSTRACT） |
+| tags | `text[]` ARRAY | 标签数组（NOT NULL，server_default `'{}'`） |
+| author_id | int (FK → users.id) | 上传者用户 ID |
 | created_at | datetime (TZ) | 创建时间 |
 | updated_at | datetime (TZ) | 更新时间 |
 | is_deleted | bool | 软删除标记 |

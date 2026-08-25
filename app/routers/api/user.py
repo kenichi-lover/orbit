@@ -126,10 +126,10 @@ async def update_my_password(
 
 @router.get("", response_model=list[UserPublic])
 async def list_users(
-    skip: Annotated[int, Query(0, ge=0)],
-    limit: Annotated[int, Query(20, ge=1, le=100)],
     current_user: Annotated[User, Depends(require_superuser)],
-    session: Annotated[AsyncSession, Depends(get_session)] 
+    session: Annotated[AsyncSession, Depends(get_session)],
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ):
     """获取用户列表（仅管理员）。"""
     return await user_service.get_users(session, skip=skip, limit=limit)
