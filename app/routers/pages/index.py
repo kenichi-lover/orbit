@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from app.schemas.user_schema import UserPublic
 
 router = APIRouter(tags=["pages"])
 
@@ -17,7 +18,8 @@ async def home(request: Request):
             "request": request, # 注意：context 里仍需保留 request 键，供 Jinja2 使用
             "title": "Orbit Gallery",
             "active_page": "explore",
-            "user": user.to_dict() if user else None,  # 将 User 对象转换为字典，排除敏感信息
+            # ✅ 用 UserPublic 白名单过滤 + mode="json" 确保 datetime → ISO 字符串
+            "user": UserPublic.model_validate(user). model_dump(mode="json") if user else None,
         }
     )
 

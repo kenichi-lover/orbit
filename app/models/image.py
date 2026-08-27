@@ -1,10 +1,9 @@
-from __future__ import annotations
-
 from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import ARRAY, Column, String
 from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy.orm import Mapped
 
 from app.models.mixins import TimestampMixin
 from app.utils.enums import Category
@@ -83,6 +82,6 @@ class Image(ImageBase, TimestampMixin, SQLModel, table=True):
 
     # ── 模块 1: 外键改为 author_id (int) ──
     author_id: int = Field(foreign_key="users.id", index=True, nullable=False)
-    author: "User" = Relationship(back_populates="images")
+    author: Mapped["User"] = Relationship(back_populates="images")
 
 

@@ -8,6 +8,8 @@ from app.dependencies.auth import resolve_user_from_cookie
 from app.models.user import User
 from app.services.user_service import get_user_avatar_url
 
+from app.schemas.user_schema import UserPublic
+
 router = APIRouter(tags=["pages"])
 templates = Jinja2Templates(directory="templates")
 
@@ -20,7 +22,7 @@ async def profile_page(
     if not user:
         return RedirectResponse(url="/", status_code=302)
 
-    profile_user = user.to_dict() if user else None
+    profile_user = UserPublic.model_validate(user).model_dump(mode="json") if user else None
     if profile_user is not None:
         profile_user["avatar_url"] = get_user_avatar_url(user)
 

@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy.orm import Mapped
 from app.models.mixins import TimestampMixin
 from app.schemas.user_schema import UserPublic
 
@@ -27,4 +28,4 @@ class User(TimestampMixin, SQLModel, table=True):
         return UserPublic.model_validate(self)
 
 
-    images: list["Image"] = Relationship(back_populates="author")
+    images: Mapped[list["Image"]] = Relationship(back_populates="author")

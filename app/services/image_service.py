@@ -21,6 +21,7 @@ from typing import Sequence
 from PIL import Image as PILImage
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from sqlmodel import col
 
 from app.models.image import Image
@@ -274,6 +275,7 @@ async def get_images_by_user(
     # 分页
     stmt = (
         select(Image)
+        .options(selectinload(Image.author))
         .order_by(col(Image.created_at).desc())
         .offset(skip)
         .limit(limit)

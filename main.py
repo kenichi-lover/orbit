@@ -45,6 +45,7 @@ from app.config.database import async_session_factory
 from app.dependencies.auth import resolve_user_from_cookie
 from app.utils import limiter
 
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
