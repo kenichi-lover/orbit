@@ -3,11 +3,17 @@ const config = {
   imageUrls: [],
   imagesInfo: [],
   orbitRadius: 320,
-  orbitLayers: 2, // 2层轨道：上层和下层
+  orbitLayers: 2,
   layerPhotoCounts: [6, 4],
   layerRadii: [340, 260],
   rotationSpeed: 0.005,
   isAutoRotate: true,
+  // 分页配置
+  thumbPageSize: 8,
+  thumbPage: 1,
+  thumbTotalPages: 1,
+  // 轨道容量：最多3层，每层8张
+  orbitMaxPhotos: 24,
 };
 
 // 当前旋转角度
@@ -15,33 +21,56 @@ let rotation = 0;
 
 /**
  * 初始化 Orbit
+ * 轨道：最多3层，每层均分，显示最新的N张（API已按created_at降序）
+ * 缩略图栏：全部图片，分页显示
  */
 export async function initOrbit() {
   bindDetailPanelEvents();
 
   try {
-    const res = await fetch('/api/images', { credentials: 'include' });
+    const res = await fetch('/api/images?skip=0&limit=100', { credentials: 'include' });
     const data = await res.json();
+
+    if (!data.items) {
+      console.error('API返回数据异常:', data);
+      return;
+    }
+
     if (data.items && data.items.length > 0) {
-      config.imageUrls = data.items.map(img => img.url);
-      config.imagesInfo = data.items;
-      
-      // Update layer photo counts based on total images
-      const total = config.imageUrls.length;
-      if (total >= 10) {
-        config.layerPhotoCounts = [Math.ceil(total * 0.6), Math.floor(total * 0.4)];
-      } else {
-        config.layerPhotoCounts = [total, 0];
-        config.orbitLayers = 1;
+      const allImages = data.items;
+      const total = allImages.length;
+
+      // 轨道：取最新 ORBIT_MAX 张
+      const orbitImages = allImages.slice(0, config.orbitMaxPhotos);
+      config.imageUrls = orbitImages.map(img => img.url);
+      config.imagesInfo = orbitImages;
+
+      // 动态计算轨道层数和每层照片数（均分，最多3层）
+      const orbitCount = orbitImages.length;
+      config.orbitLayers = Math.min(3, Math.ceil(Math.sqrt(orbitCount)));
+      const perLayer = Math.ceil(orbitCount / config.orbitLayers);
+      config.layerPhotoCounts = [];
+      config.layerRadii = [];
+      for (let i = 0; i < config.orbitLayers; i++) {
+        config.layerPhotoCounts.push(i === config.orbitLayers - 1
+          ? orbitCount - i * perLayer
+          : perLayer);
+        config.layerRadii.push(260 + i * 80); // 内→外：260, 340, 420
       }
+
+      // 缩略图栏：全部图片分页
+      config.thumbTotalPages = Math.ceil(total / config.thumbPageSize);
+      config.thumbPage = 1;
+      config.thumbAllImages = allImages; // 全量数据供缩略图渲染用
     }
   } catch(e) {
     console.error('Error fetching images', e);
   }
-  
+
   initPhotos();
   initSteam();
   initThumbnails();
+  initPagination();
   initNavigator();
   initControls();
   animate();
@@ -76,19 +105,13 @@ function initNavigator() {
     // 画装饰环（俯视同心圆）
     const radii = config.layerRadii.map(r => (r / config.orbitRadius) * maxRadius);
 
-    // 外环
-    ctx.beginPath();
-    ctx.arc(cx, cy, radii[0], 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // 内环
-    ctx.beginPath();
-    ctx.arc(cx, cy, radii[1], 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    radii.forEach((r, i) => {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.12 + i * 0.03})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    });
 
     // 中心点
     ctx.beginPath();
@@ -207,18 +230,87 @@ function initSteam() {
 }
 
 function initThumbnails() {
+  renderThumbnails();
+}
+
+/**
+ * 渲染当前页的缩略图（全部图片，分页）
+ */
+function renderThumbnails() {
   const thumbnailBar = document.getElementById("thumbnail-bar");
   if (!thumbnailBar) return;
   thumbnailBar.innerHTML = "";
 
-  config.imageUrls.forEach((url, index) => {
+  const page = config.thumbPage;
+  const pageSize = config.thumbPageSize;
+  const start = (page - 1) * pageSize;
+  const end = Math.min(start + pageSize, config.thumbAllImages.length);
+
+  for (let i = start; i < end; i++) {
+    const url = config.thumbAllImages[i].url;
     const thumb = document.createElement("img");
     thumb.src = url;
     thumb.className = "thumbnail-item";
-    thumb.dataset.index = index;
-    thumb.addEventListener("click", () => showDetail(index));
+    thumb.dataset.index = i;
+    thumb.addEventListener("click", () => showDetail(i));
     thumbnailBar.appendChild(thumb);
+  }
+
+  updatePaginationUI();
+}
+
+/**
+ * 初始化分页控件
+ */
+function initPagination() {
+  const bar = document.getElementById("pagination-bar");
+  const prevBtn = document.getElementById("prev-page");
+  const nextBtn = document.getElementById("next-page");
+
+  if (!bar || config.thumbTotalPages <= 1) {
+    if (bar) bar.style.display = "none";
+    return;
+  }
+
+  bar.style.display = "flex";
+
+  prevBtn.addEventListener("click", () => {
+    if (config.thumbPage > 1) {
+      config.thumbPage--;
+      renderThumbnails();
+    }
   });
+
+  nextBtn.addEventListener("click", () => {
+    if (config.thumbPage < config.thumbTotalPages) {
+      config.thumbPage++;
+      renderThumbnails();
+    }
+  });
+
+  // 键盘左右切换页
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft" && config.thumbPage > 1) {
+      config.thumbPage--;
+      renderThumbnails();
+    } else if (e.key === "ArrowRight" && config.thumbPage < config.thumbTotalPages) {
+      config.thumbPage++;
+      renderThumbnails();
+    }
+  });
+}
+
+/**
+ * 更新分页按钮状态和页码显示
+ */
+function updatePaginationUI() {
+  const info = document.getElementById("pagination-info");
+  const prevBtn = document.getElementById("prev-page");
+  const nextBtn = document.getElementById("next-page");
+
+  if (info) info.textContent = `${config.thumbPage} / ${config.thumbTotalPages}`;
+  if (prevBtn) prevBtn.disabled = config.thumbPage <= 1;
+  if (nextBtn) nextBtn.disabled = config.thumbPage >= config.thumbTotalPages;
 }
 
 function bindDetailPanelEvents() {
@@ -343,8 +435,9 @@ function showDetail(index) {
   const detail = document.getElementById("detail-panel");
   if (!detail) return;
 
-  const info = config.imagesInfo[index] || {};
-  const imageUrl = info.url || config.imageUrls[index] || "";
+  // thumbAllImages 是全量数据，优先用它（轨道+缩略图通用）
+  const info = config.thumbAllImages[index] || config.imagesInfo[index] || {};
+  const imageUrl = info.url || (config.thumbAllImages[index]?.url) || "";
   const title = info.title || `照片 ${index + 1}`;
   const category = info.category || "Gallery";
   const description = info.description || "暂无描述";

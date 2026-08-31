@@ -17,3 +17,6 @@ dependencies = [
     "slowapi>=0.1.10",
     "sqlmodel>=0.0.39",
 ]
+
+[tool.fastapi]
+entrypoint = "main:app"

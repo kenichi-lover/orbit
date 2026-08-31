@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config.settings import settings
 from app.config.database import get_session
 from app.schemas.user_schema import (
-    UserCreate, UserLogin, UserPublic, TokenResponse
+    UserCreate, UserLogin, TokenResponse
     )
 from app.utils.limiter import limiter
 from app.utils.jwt import create_access_token
@@ -105,7 +105,6 @@ async def register(
     return TokenResponse(
         access_token=access_token,
         token_type="bearer",
-        username=user.username,
     )
 
 @router.post("/login", response_model=TokenResponse)
@@ -127,7 +126,6 @@ async def login(
     return TokenResponse(
         access_token=access_token,
         token_type="bearer",
-        username=user.username,
     )
 
 @router.post("/logout")
