@@ -1,10 +1,23 @@
+import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Any
 
 import jwt
-from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
+from jwt.exceptions import ExpiredSignatureError, InvalidTokenError as PyJWTInvalidTokenError
 
 from app.config.settings import settings
+
+
+class TokenError(Exception):
+    """Token 校验失败基类"""
+
+
+class TokenExpiredError(TokenError):
+    """Token 已过期"""
+
+
+class InvalidTokenError(TokenError):
+    """Token 无效"""
 
 
 def create_access_token(
@@ -13,49 +26,57 @@ def create_access_token(
     extra_claims: dict[str, Any] | None = None,
 ) -> str:
     """生成 JWT access token。
-    
+
     Args:
         subject: Token 主体，通常是用户 ID（会被强制转为字符串）。
         expires_delta: 自定义过期时间，默认从 settings 读取。
-        extra_claims: 额外声明（如 roles, permissions）。
+        extra_claims: 额外声明（如 roles, permissions），不可覆盖标准声明。
     """
+    if expires_delta is not None and expires_delta.total_seconds() <= 0:
+        raise ValueError("expires_delta 必须为正数")
+
     now = datetime.now(timezone.utc)
     expire = now + (
-        expires_delta 
+        expires_delta
         or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    
-    payload = {
-        "sub": str(subject),           # JWT 标准：sub 必须是字符串
-        "iat": now,                    # 签发时间
-        "exp": expire,                 # 过期时间
-        "type": "access",              # Token 类型，防止混用
-    }
+
+    payload: dict[str, Any] = {}
     if extra_claims:
         payload.update(extra_claims)
-    
+
+    # 标准声明最后写入，拥有最高优先级，防止被 extra_claims 覆盖
+    payload.update({
+        "sub": str(subject),
+        "iat": now,
+        "exp": expire,
+        "jti": str(uuid.uuid4()),
+        "type": "access",
+    })
+
     return jwt.encode(
         payload,
-        settings.SECRET_KEY.get_secret_value(),  # 如果 SECRET_KEY 是 SecretStr
+        settings.SECRET_KEY.get_secret_value(),
         algorithm=settings.ALGORITHM,
     )
 
 
 def decode_access_token(token: str) -> dict[str, Any]:
-    """解码并验证 JWT access token。验证失败时抛出 ValueError，由调用方处理。"""
+    """解码并验证 JWT access token。失败时抛出 TokenError 子类异常。"""
     try:
         payload = jwt.decode(
             token,
             settings.SECRET_KEY.get_secret_value(),
             algorithms=[settings.ALGORITHM],
+            options={"require": ["exp", "iat", "sub"]},
         )
     except ExpiredSignatureError as exc:
-        raise ValueError("Token has expired") from exc
-    except InvalidTokenError as exc:
-        raise ValueError("Invalid token") from exc
-    
-    # 类型校验：防止 refresh token 或其他 token 被当作 access token 使用
+        raise TokenExpiredError("Token 已过期") from exc
+    except PyJWTInvalidTokenError as exc:
+        raise InvalidTokenError("无效的 Token") from exc
+
     if payload.get("type") != "access":
-        raise ValueError("Invalid token type")
-    
+        raise InvalidTokenError("无效的 Token 类型")
+
     return payload
+

@@ -5,12 +5,12 @@ from typing import Annotated
 from app.config.database import get_session
 from app.models.user import User
 from app.services.user_service import get_user_by_id
-from app.utils.jwt import decode_access_token
+from app.utils.jwt import decode_access_token, TokenError, TokenExpiredError
 
 
 security = HTTPBearer(auto_error=False)
 
-# ✅ 建议：改为工厂函数，每次创建新实例
+# ✅ 工厂函数，每次创建新实例
 def _credentials_exception() -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -24,13 +24,20 @@ async def _get_user_from_token(
     session: AsyncSession,
     token: str | None,
 ) -> User | None:
-    """底层：从 token 解析用户。token 无效或用户不存在时返回 None。"""
+    """
+    底层：
+        从 token 解析用户。token 无效或用户不存在时返回 None。
+    Raises:
+        TokenExpiredError: token 已过期，供上层区分处理。
+    """
     if not token:
         return None
 
     try:
         payload = decode_access_token(token)
-    except ValueError:
+    except TokenExpiredError:
+        raise
+    except TokenError:
         return None
 
     try:
@@ -55,8 +62,15 @@ async def get_current_user(
 ) -> User:
     """从 JWT token 获取当前登录用户。失败时抛 401/403。"""
     token = credentials.credentials if credentials else request.cookies.get("access_token")
-    
-    user = await _get_user_from_token(session, token)
+
+    try:
+        user = await _get_user_from_token(session, token)
+    except TokenExpiredError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expired",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
     if user is None:
         raise _credentials_exception()
     
@@ -67,7 +81,11 @@ async def resolve_user_from_cookie(
     request: Request,
     session: Annotated[AsyncSession, Depends(get_session)]
 ) -> User | None:
-    """仅从 cookie 尝试解析当前用户，失败时静默返回 None。适合页面级"可选登录"场景。"""
+    """
+    仅从 cookie 尝试解析当前用户，失败时静默返回 None。
+    页面路由(Jinja2 SSR)专用：只信任 Cookie,不读取 Header。
+    适合页面级"可选登录"场景。
+    """
     token = request.cookies.get("access_token")
     return await _get_user_from_token(session, token)
 

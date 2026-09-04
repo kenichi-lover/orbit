@@ -10,37 +10,35 @@ from app.schemas.user_schema import (
 from app.utils.limiter import limiter
 from app.utils.jwt import create_access_token
 from app.services import user_service
-from app.utils.security import verify_password
-from app.dependencies.auth import get_current_user
+from app.utils.security import verify_password, verify_dummy_password
 from app.models.user import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# --- 优化点：抽取 Cookie 配置 ---
-# 根据 Debug 模式统一配置 Cookie 安全属性
-IS_DEBUG = getattr(settings, "DEBUG", False)
-COOKIE_SECURE = not IS_DEBUG
-COOKIE_SAMESITE = "lax" if IS_DEBUG else "none"
-
 def set_auth_cookie(response: Response, access_token: str):
-    """辅助函数：设置认证 Cookie"""
+    """
+    辅助函数：设置认证 Cookie
+    配置统一来自 settings，与 auth 依赖保持一致。
+    """
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=COOKIE_SECURE,
-        max_age=60 * 24 * 7,  # 7 天
+        secure=settings.COOKIE_SECURE,
+        max_age=settings.ACCESS_TOKEN_EXPIRE_SECONDS,
         path="/",
-        samesite=COOKIE_SAMESITE,
+        samesite=settings.COOKIE_SAME_SITE
     )
 
 def clear_auth_cookie(response: Response):
-    """辅助函数：清除认证 Cookie"""
-    # 注意：删除 Cookie 时 path, secure, samesite 等参数必须与设置时完全一致，否则可能删除失败
+    """
+    辅助函数：清除认证 Cookie
+    参数必须与设置时完全一致
+    """
     response.delete_cookie(
         key="access_token",
-        secure=COOKIE_SECURE,
-        samesite=COOKIE_SAMESITE,
+        secure=settings.COOKIE_SECURE,
+        samesite=settings.COOKIE_SAME_SITE,
         httponly=True,
         path="/"  # 建议显式指定 path
     )
@@ -54,9 +52,8 @@ async def _authenticate_user(
     user = await user_service.get_user_by_username(session, username)
     
     # --- 优化点：防止时序攻击 ---
-    # 如果用户不存在，也执行一次 verify_password，模拟密码验证耗时，防止攻击者通过响应时间猜解用户名
     if not user:
-        verify_password(password, "dummy_hash_to_prevent_timing_attack")
+        verify_dummy_password(password)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password",

@@ -4,6 +4,17 @@ from argon2.exceptions import VerifyMismatchError, InvalidHash
 # Argon2 配置：平衡安全与性能
 ph = PasswordHasher()
 
+_DUMMY_HASH: str = ph.hash("dummy-password-for-timing-attack")
+
+def verify_dummy_password(plain_password: str) -> None:
+    """
+    对不存在的用户执行一次等价耗时的密码验证，防止时序攻击猜解用户名。
+    """
+    try:
+        ph.verify(_DUMMY_HASH, plain_password)
+    except (VerifyMismatchError, InvalidHash):
+        pass  # 必定失败，目的只是消耗等量时间
+
 
 def hash_password(password: str) -> str:
     """对明文密码进行 Argon2 哈希。"""
