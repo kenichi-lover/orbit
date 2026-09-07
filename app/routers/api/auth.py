@@ -23,11 +23,11 @@ def set_auth_cookie(response: Response, access_token: str):
     response.set_cookie(
         key="access_token",
         value=access_token,
-        httponly=True,
-        secure=settings.COOKIE_SECURE,
+        httponly=True,    # JS 无法读取，防 XSS
+        secure=settings.COOKIE_SECURE,   # HTTPS -only   
         max_age=settings.ACCESS_TOKEN_EXPIRE_SECONDS,
         path="/",
-        samesite=settings.COOKIE_SAME_SITE
+        samesite=settings.COOKIE_SAME_SITE  # CSRF 防护
     )
 
 def clear_auth_cookie(response: Response):

@@ -17,37 +17,58 @@ function escapeHtml(unsafe) {
         .replace(/'/g, "&#039;");
 }
 
-window._storyRender = async function renderStoryTimeline(query = "") {
+let storyPage = 1;
+const PAGE_SIZE = 20;
+
+window._storyRender = async function renderStoryTimeline(query = "", page = 1) {
     const container = document.getElementById('story-timeline');
+    const pageContainer = document.getElementById('story-pagination');
     if (!container) return;
 
+    storyPage = page;
+    const skip = (page - 1) * PAGE_SIZE;
+
     let images = [];
+    let total = 0;
     try {
-        // 获取图片数据
-        const res = await fetch('/api/images?skip=0&limit=50', {
+        const res = await fetch(`/api/images?skip=${skip}&limit=${PAGE_SIZE}`, {
             credentials: 'include'
         });
         const data = await res.json();
         images = data.items || [];
+        total = data.total || 0;
     } catch (err) {
         console.error('Failed to load images for story page', err);
         container.innerHTML = '<p style="color: white; text-align: center;">加载叙事内容失败</p>';
+        if (pageContainer) pageContainer.innerHTML = '';
         return;
     }
 
     // 搜索过滤逻辑
     if (query) {
         const lowerQuery = query.toLowerCase();
-        images = images.filter(img => 
-            (img.title || '').toLowerCase().includes(lowerQuery) || 
-            (img.url || '').toLowerCase().includes(lowerQuery) || 
-            (img.category || '').toLowerCase().includes(lowerQuery) || 
+        images = images.filter(img =>
+            (img.title || '').toLowerCase().includes(lowerQuery) ||
+            (img.url || '').toLowerCase().includes(lowerQuery) ||
+            (img.category || '').toLowerCase().includes(lowerQuery) ||
             (img.tags || '').toLowerCase().includes(lowerQuery)
         );
+        // 搜索时重新从第一页开始渲染
+        if (page !== 1) {
+            renderStoryTimeline(query, 1);
+            return;
+        }
     }
 
-    if (images.length === 0) {
+    if (images.length === 0 && total === 0) {
         container.innerHTML = '<p style="color: rgba(255,255,255,0.6); text-align: center;">当前没有可展示的图片。</p>';
+        if (pageContainer) pageContainer.innerHTML = '';
+        return;
+    }
+
+    if (images.length === 0 && total > 0) {
+        container.innerHTML = '<p style="color: rgba(255,255,255,0.6); text-align: center;">该页暂无数据。</p>';
+        renderPagination(pageContainer, page, total, PAGE_SIZE);
         return;
     }
 
@@ -134,7 +155,59 @@ window._storyRender = async function renderStoryTimeline(query = "") {
             </div>
         `;
     }).join('');
+
+    // 渲染分页控件
+    if (pageContainer) renderPagination(pageContainer, page, total, PAGE_SIZE);
 };
+
+/**
+ * 渲染页码控件
+ */
+function renderPagination(container, currentPage, total, pageSize) {
+    if (!container) return;
+    const totalPages = Math.ceil(total / pageSize);
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const pages = [];
+    // 显示当前页前后各 2 页，避免页码过多
+    const start = Math.max(1, currentPage - 2);
+    const end = Math.min(totalPages, currentPage + 2);
+
+    if (start > 1) {
+        pages.push(`<button data-page="1" class="page-btn">1</button>`);
+        if (start > 2) pages.push(`<span class="page-ellipsis">…</span>`);
+    }
+    for (let i = start; i <= end; i++) {
+        pages.push(`<button data-page="${i}" class="page-btn${i === currentPage ? ' active' : ''}">${i}</button>`);
+    }
+    if (end < totalPages) {
+        if (end < totalPages - 1) pages.push(`<span class="page-ellipsis">…</span>`);
+        pages.push(`<button data-page="${totalPages}" class="page-btn">${totalPages}</button>`);
+    }
+
+    container.innerHTML = `
+        <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 40px; padding-bottom: 20px;">
+            <button data-page="${currentPage - 1}" class="page-btn nav-btn" ${currentPage === 1 ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : ''}>上一页</button>
+            ${pages.join('')}
+            <button data-page="${currentPage + 1}" class="page-btn nav-btn" ${currentPage === totalPages ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : ''}>下一页</button>
+            <span style="color: rgba(255,255,255,0.4); font-size: 12px; margin-left: 8px;">共 ${total} 张</span>
+        </div>
+    `.trim();
+
+    // 事件委托
+    container.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-page]');
+        if (!btn || btn.disabled) return;
+        const p = parseInt(btn.dataset.page, 10);
+        if (p >= 1 && p <= totalPages && p !== currentPage) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            window._storyRender && window._storyRender('', p);
+        }
+    });
+}
 
 // 切换到编辑模式
 function editStory(id) {
