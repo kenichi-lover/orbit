@@ -1,14 +1,3 @@
-"""
-Image Service — 分模块优化说明：
-
-模块 1: 外键对齐     → user_name → user_id，查询走索引
-模块 2: Tags 查询    → LIKE 子串匹配 → PG ARRAY @> contains
-模块 3: Schema 对齐  → ImageCreate / ImageUpdate / Category 枚举
-模块 4: MIME 修正    → Pillow fallback typo 修复 (images/ → image/)
-模块 5: 异步规范化   → get_running_loop + 软删除查询封装
-模块 6: 搜索参数     → 散列参数 → ImageSearchParams 对象
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -24,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlmodel import col
 
+from app.config.settings import settings
 from app.models.image import Image
 from app.schemas.image_schema import ImageCreate, ImagePublic, ImageSearchParams, ImageUpdate
 from app.utils.enums import Category
@@ -31,15 +21,15 @@ from app.utils.enums import Category
 
 # ==================== 配置 ====================
 
-STATIC_DIR = Path("static")
-IMAGES_DIR = STATIC_DIR / "images"
+STATIC_DIR = Path(settings.STATIC_DIR)
+IMAGES_DIR = Path(settings.IMAGES_DIR)
 
-THUMBNAIL_SIZE = (300, 300)
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+THUMBNAIL_SIZE = (settings.THUMBNAIL_WIDTH, settings.THUMBNAIL_HEIGHT)
+MAX_FILE_SIZE = settings.MAX_IMAGE_FILE_SIZE
+ALLOWED_EXTENSIONS = {f".{ext.lower()}" for ext in settings.ALLOWED_IMAGE_EXTENSIONS}
 
 # 软删除清理保留天数
-SOFT_DELETE_RETENTION_DAYS = 30
+SOFT_DELETE_RETENTION_DAYS = settings.SOFT_DELETE_RETENTION_DAYS
 
 
 # ==================== 内部工具 ====================
@@ -232,7 +222,7 @@ async def get_image_by_id(
     image_id: int,
     include_deleted: bool = False,
 ) -> Image | None:
-    stmt = select(Image).where(col(Image.id == image_id))
+    stmt = select(Image).where(col(Image.id) == image_id)
     if not include_deleted:
         stmt = stmt.where(_not_deleted())
     result = await session.execute(stmt)

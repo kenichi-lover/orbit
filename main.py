@@ -24,9 +24,13 @@ from app.routers.api.user import (
     router as user_router
 )
 
+from app.routers.api.user_admin import (
+    router as admin_user_router
+)
+
 from app.routers.health import (
     router as health_router
-) 
+)
 
 from app.routers.pages.index import (
     router as index_router
@@ -81,7 +85,8 @@ app = FastAPI(
 @app.middleware("http")
 async def user_cookie_middleware(request: Request, call_next):
     async with async_session_factory() as session:
-        request.state.user = await resolve_user_from_cookie(request, session)
+        user = await resolve_user_from_cookie(request, session)
+        request.state.user = user.to_public() .model_dump(mode="json") if user else None
     return await call_next(request)
 
 app.state.limiter = limiter
@@ -118,6 +123,7 @@ app.add_middleware(SecureASGIMiddleware, secure=secure_headers)
 app.include_router(auth_router, prefix="/api")
 app.include_router(image_router, prefix="/api")
 app.include_router(user_router, prefix="/api")
+app.include_router(admin_user_router, prefix="/api")
 app.include_router(index_router)
 app.include_router(story_router)
 app.include_router(photo_router)

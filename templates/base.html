@@ -175,7 +175,7 @@
 </div>
 
 <!-- 用户数据注入 -->
-<script type="text/plain" id="current-user-data">{{ user | default(none) | tojson }}</script>
+<script type="application/json" id="current-user-data">{{ user | default(none) | tojson }}</script>
 
 <script src="/static/js/main.js" type="module"></script>
 <script src="/static/js/auth.js" type="module"></script>

@@ -73,14 +73,17 @@ window._storyRender = async function renderStoryTimeline(query = "", page = 1) {
     }
 
     // --- 性能优化：在循环外只读取一次当前用户数据 ---
-    let currentUser = null;
-    try {
-        const userDataEl = document.getElementById('current-user-data');
-        if (userDataEl) {
-            currentUser = JSON.parse(userDataEl.textContent || 'null');
+    let currentUser = window.currentUser || window.readCurrentUser?.() || null;
+    if (!currentUser) {
+        try {
+            const userDataEl = document.getElementById('current-user-data') || document.getElementById('user-data');
+            if (userDataEl) {
+                const raw = userDataEl.textContent?.trim();
+                currentUser = raw && raw !== 'null' && raw !== 'undefined' ? JSON.parse(raw) : null;
+            }
+        } catch (err) {
+            console.error('Failed to parse current user data', err);
         }
-    } catch (err) {
-        console.error('Failed to parse current user data', err);
     }
     // ----------------------------------------------
 

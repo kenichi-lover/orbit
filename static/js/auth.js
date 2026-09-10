@@ -1,12 +1,24 @@
 window.currentUser = null;
-const currentUserDataEl = document.getElementById('current-user-data');
-if (currentUserDataEl) {
+
+function readCurrentUser() {
+  const currentUserDataEl = document.getElementById('current-user-data') || document.getElementById('user-data');
+  if (!currentUserDataEl) return null;
+
+  const raw = currentUserDataEl.textContent?.trim();
+  if (!raw || raw === 'null' || raw === 'undefined') {
+    return null;
+  }
+
   try {
-    window.currentUser = JSON.parse(currentUserDataEl.textContent);
+    return JSON.parse(raw);
   } catch (err) {
     console.error('Failed to parse current user data', err);
+    return null;
   }
 }
+
+window.currentUser = readCurrentUser();
+window.readCurrentUser = readCurrentUser;
 
 let authMode = 'login';
 

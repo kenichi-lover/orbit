@@ -36,6 +36,21 @@ class UserPasswordUpdate(SQLModel):
     new_password: str = Field(..., min_length=8)
 
 
+class MessageResponse(SQLModel):
+    message: str
+
+
+class AvatarResponse(SQLModel):
+    success: bool = True
+    avatar_url: str
+
+
+class AdminPasswordReset(SQLModel):
+    """管理员强制重置密码请求体"""
+
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
 class UserLogin(SQLModel):
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=8, max_length=128)
@@ -71,6 +86,9 @@ __all__ = [
     "UserCreate",
     "UserUpdate",
     "UserPasswordUpdate",
+    "MessageResponse",
+    "AvatarResponse",
+    "AdminPasswordReset",
     "UserLogin",
     "UserPublic",
     "TokenResponse",

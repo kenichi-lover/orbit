@@ -1,8 +1,12 @@
 (function () {
   'use strict';
 
-  const profileUsername = document.getElementById('profile-root')?.dataset.username || '';
-  const profileUserId = parseInt(document.getElementById('profile-root')?.dataset.userId || '0', 10);
+  const profileRoot = document.getElementById('profile-root');
+  const profileUsername = profileRoot?.dataset.username || '';
+  const profileUserIdFromRoot = parseInt(profileRoot?.dataset.userId || '0', 10);
+  const profileUserId = Number.isFinite(profileUserIdFromRoot) && profileUserIdFromRoot > 0
+    ? profileUserIdFromRoot
+    : Number(window.currentUser?.id || 0);
   const avatarInput = document.getElementById('avatar-upload-input');
   const avatarStatus = document.getElementById('avatar-status');
   const timeline = document.getElementById('activity-timeline');
@@ -24,6 +28,15 @@
     const statLatest = document.getElementById('stat-latest');
 
     if (!gallery) return;
+
+    if (!profileUserId) {
+      gallery.innerHTML = '';
+      if (emptyState) {
+        emptyState.style.display = 'block';
+        emptyState.textContent = '未能识别当前用户，无法加载作品。';
+      }
+      return;
+    }
 
     try {
       const res = await fetch(
@@ -56,13 +69,17 @@
                   minute: '2-digit',
                 })
               : '刚刚';
+            const mediaUrl = item.thumbnail_url || item.url || '/static/images/placeholder.jpg';
             const li = document.createElement('li');
             li.className = 'timeline-item';
             li.innerHTML = `
               <span class="timeline-dot"></span>
-              <div>
-                <strong>${escapeHtml(item.title || '未命名作品')}</strong>
-                <p>${escapeHtml(label)} · ${escapeHtml(item.category || 'Gallery')}</p>
+              <div style="display:flex; gap:12px; align-items:center; width:100%;">
+                <img src="${escapeHtml(mediaUrl)}" alt="${escapeHtml(item.title || '用户作品')}" style="width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,0.15);" />
+                <div>
+                  <strong>${escapeHtml(item.title || '未命名作品')}</strong>
+                  <p>${escapeHtml(label)} · ${escapeHtml(item.category || 'Gallery')}</p>
+                </div>
               </div>
             `;
             timeline.appendChild(li);

@@ -23,6 +23,15 @@ class Settings(BaseSettings):
     # --- 上传 ---
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10 MB
 
+    # --- 图片服务 ---
+    STATIC_DIR: str = "static"
+    IMAGES_DIR: str = "static/images"
+    THUMBNAIL_WIDTH: int = 300
+    THUMBNAIL_HEIGHT: int = 300
+    MAX_IMAGE_FILE_SIZE: int = 10 * 1024 * 1024
+    ALLOWED_IMAGE_EXTENSIONS: list[str] = ["jpg", "jpeg", "png", "gif", "webp"]
+    SOFT_DELETE_RETENTION_DAYS: int = 30
+
     # --- Cookie ---
     COOKIE_SECURE: bool = True
     COOKIE_SAME_SITE: Literal["strict", "lax", "none"] = "lax"
