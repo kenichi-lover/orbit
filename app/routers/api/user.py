@@ -16,7 +16,7 @@ from app.schemas.user_schema import (
     UserPublic,
     UserUpdate,
 )
-from app.services import user_service
+from app.services import storage_service, user_service
 from app.utils.security import hash_password, verify_password
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -42,12 +42,19 @@ async def upload_my_avatar(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No file uploaded",
         )
-
+    if current_user.id is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="User data corrupted: missing user ID",
+        )
     file_data = await file.read()
-    avatar_url = await user_service.save_user_avatar(
-        current_user, file_data, file.filename
+    avatar_url = await storage_service.upload_avatar(
+        user_id=current_user.id,
+        username=current_user.username,
+        file_data=file_data,
+        original_filename=file.filename,
     )
-    await session.commit()
+    await user_service.update_avatar_url(session, current_user, avatar_url)
     return AvatarResponse(avatar_url=avatar_url)
 
 

@@ -1,6 +1,6 @@
 # Orbit Gallery — 项目进度
 
-> 最后更新：2026-08-25
+> 最后更新：2026-09-12
 
 ---
 
@@ -28,8 +28,12 @@
 - [x] 异步数据库层（`app/config/database.py`：AsyncEngine + async_sessionmaker + get_session + create_db_and_tables）
 - [x] 数据模型定义
   - `app/models/image.py` — Image 表（author_id FK、file_name unique、tags ARRAY、category ENUM、软删除、时间戳）
-  - `app/models/user.py` — User 表（username、email、hashed_password、is_active、is_superuser、头像、时间戳）
+  - `app/models/user.py` — User 表（username、email、hashed_password、is_active、is_superuser、avatar_url、时间戳）
 - [x] 路由分层（`routers/api/` + `routers/pages/` + `routers/health.py`）
+- [x] 服务层分层
+  - `app/services/image_service.py` — 图片业务逻辑（CRUD、搜索、缩略图生成）
+  - `app/services/user_service.py` — 用户业务逻辑（数据库 CRUD）
+  - `app/services/storage_service.py` — 文件存储服务（头像上传、路径生成、旧文件清理，配置来自 `settings`）
 
 ### 前端 — 页面结构
 
@@ -82,6 +86,7 @@
 - [x] **注册后自动登录** — `/auth/register` 返回 JWT token + httpOnly cookie
 - [x] **图片搜索接口** — `/api/search` 支持关键词(q)、分类(category)、标签(tag)、作者(user_id)筛选
 - [x] **图片上传接口** — `/api/images/upload` 支持 Form 提交 + category/tags，**需认证**
+- [x] **头像上传接口** — `/api/users/me/avatar` POST，保存到 `static/avatars` 并写入数据库，**需认证**
 - [x] **图片 CRUD** — `GET /api/images`（公开）、`PUT /api/images/{id}`（更新，需认证）、`DELETE /api/images/{id}`（软删/硬删，需认证）
 - [x] **权限控制** — `_ensure_image_access()` 校验作者/管理员权限，所有操作均需认证
 - [x] **页面路由用户数据注入** — `story.py` 使用 `resolve_user_from_cookie` 从 cookie 解析用户并注入模板，支持前端权限判断
@@ -132,7 +137,6 @@
 
 - [ ] **蒸汽动画** — `initSteam()` 是空函数占位，咖啡杯蒸汽效果待实现
 - [ ] **收藏/下载/分享** — Detail Panel 操作按钮（骨架已就绪）
-- [ ] **头像上传** — 用户头像自定义（接口已就绪，前端上传按钮待联调）
 
 ---
 
@@ -225,3 +229,4 @@ class Category(str, Enum):
 3. **fetch 认证**：所有需要携带登录状态的 `fetch` 调用必须添加 `credentials: 'include'`，否则 cookie 不会发送。
 4. **页面路由用户注入**：页面级路由（如 `/story`）应使用 `resolve_user_from_cookie` 而非 `get_current_user`，以支持未登录用户浏览页面内容。
 5. **ES Module 加载时序**：`story.js` 作为独立 ES Module 加载，不应依赖 `window.currentUser` 缓存，而应从 DOM `#current-user-data` 读取当前用户信息。
+6. **配置统一**：所有文件存储路径、大小限制通过 `app/config/settings.py`（`settings` 实例）管理，service 层直接读取，禁止硬编码路径或常量。

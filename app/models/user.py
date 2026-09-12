@@ -21,6 +21,7 @@ class User(TimestampMixin, SQLModel, table=True):
 
     is_active: bool = Field(default=True)
     is_superuser: bool = Field(default=False)
+    avatar_url: str | None = Field(default=None, max_length=500)
     
 
     def to_public(self) -> UserPublic:

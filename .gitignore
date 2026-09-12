@@ -18,5 +18,8 @@ tailwindcss
 static/avatars/*
 !static/avatars/.gitkeep
 
+# 用户上传的图片（运行时产物）
+uploads/
+
 # 运行时/上传的图片
 static/images/*

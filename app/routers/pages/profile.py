@@ -6,8 +6,6 @@ from fastapi.templating import Jinja2Templates
 
 from app.dependencies.auth import resolve_user_from_cookie
 from app.models.user import User
-from app.services.user_service import get_user_avatar_url
-
 from app.schemas.user_schema import UserPublic
 
 router = APIRouter(tags=["pages"])
@@ -24,7 +22,7 @@ async def profile_page(
 
     profile_user = UserPublic.model_validate(user).model_dump(mode="json") if user else None
     if profile_user is not None:
-        profile_user["avatar_url"] = get_user_avatar_url(user)
+        profile_user["avatar_url"] = user.avatar_url
 
     return templates.TemplateResponse(
         request,

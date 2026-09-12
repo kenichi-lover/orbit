@@ -213,6 +213,10 @@ function initPhotos() {
       img.addEventListener("mouseleave", () => {
         config.isAutoRotate = true;
       });
+      img.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openImagePreview(img.dataset.index);
+      });
       
       layerPhotos.appendChild(img);
     }
@@ -330,10 +334,53 @@ function bindDetailPanelEvents() {
   });
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && detail.classList.contains("is-open")) {
-      hideDetail();
+    if (event.key === "Escape") {
+      const preview = document.getElementById("image-preview-overlay");
+      if (preview?.classList.contains("is-open")) {
+        closeImagePreview();
+      } else if (event.key === "Escape" && detail.classList.contains("is-open")) {
+        hideDetail();
+      }
     }
   });
+
+  // 图片预览
+  const overlay = document.getElementById("image-preview-overlay");
+  const previewImg = document.getElementById("image-preview-img");
+  const previewClose = document.querySelector(".image-preview-close");
+
+  if (overlay) {
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) closeImagePreview();
+    });
+  }
+
+  if (previewClose) {
+    previewClose.addEventListener("click", closeImagePreview);
+  }
+}
+
+function openImagePreview(index) {
+  const info = config.thumbAllImages[index] || config.imagesInfo[index] || {};
+  const url = info.url || "";
+  if (!url) return;
+
+  const overlay = document.getElementById("image-preview-overlay");
+  const previewImg = document.getElementById("image-preview-img");
+  if (!overlay || !previewImg) return;
+
+  previewImg.src = url;
+  overlay.hidden = false;
+  requestAnimationFrame(() => overlay.classList.add("is-open"));
+}
+
+function closeImagePreview() {
+  const overlay = document.getElementById("image-preview-overlay");
+  const previewImg = document.getElementById("image-preview-img");
+  if (!overlay) return;
+  overlay.classList.remove("is-open");
+  if (previewImg) previewImg.src = "";
+  overlay.hidden = true;
 }
 
 function initControls() {
