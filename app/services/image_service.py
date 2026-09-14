@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Sequence
 
 from PIL import Image as PILImage
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, inspect as sa_inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlmodel import col
@@ -273,7 +273,7 @@ async def get_images_by_user(
     if where_clauses:
         stmt = stmt.where(*where_clauses)
 
-    items = (await session.execute(stmt)).scalars().all()
+    items = (await session.execute(stmt)).scalars().unique().all()
     return items, total_count
 
 
@@ -381,16 +381,19 @@ async def search_images(
     total_count = (await session.execute(count_stmt)).scalar_one() or 0
 
     # 分页查询
+    # 预加载 author 关系，避免 async lazy load 触发 MissingGreenlet
     stmt = (
         select(Image)
+        .options(selectinload(Image.author))
         .order_by(col(Image.created_at).desc())
         .offset(params.skip)
         .limit(params.limit)
     )
     if where_clauses:
         stmt = stmt.where(*where_clauses)
-
-    items = (await session.execute(stmt)).scalars().all()
+        
+    # ✅ unique() 防止 selectinload 产生重复行导致分页数量错误
+    items = (await session.execute(stmt)).scalars().unique().all()
     return items, total_count
 
 
@@ -433,9 +436,12 @@ def image_to_public(img: Image) -> ImagePublic:
     )
 
     # ── author 处理 ──
-    author_name = None
-    if img.author and not getattr(img.author, "is_anonymous", False):
+    state = sa_inspect(img)
+    author_loaded = "author" not in state.unloaded  # type: ignore[operator]
+    if author_loaded and img.author and not getattr(img.author, "is_anonymous", False):
         author_name = img.author.username
+    else:
+        author_name = None
 
     return ImagePublic(
         id=img.id,

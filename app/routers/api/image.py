@@ -22,6 +22,9 @@ from app.utils.enums import Category
 from app.utils.limiter import limiter
 from app.utils.pagination import PaginationParams, PaginatedResponse
 
+import logging
+logger = logging.getLogger(__name__)
+
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 
 router = APIRouter()
@@ -166,7 +169,16 @@ async def search_images(
         session,
         params=params,
     )
-    public_items = [image_to_public(img) for img in items]
+
+    # 防御性转换：即使 service 层漏了 eager load 也不会 500
+    public_items = []
+    for img in items:
+        try:
+            public_items.append(image_to_public(img))
+        except Exception :
+            # 降级：跳过无法序列化的记录，而非整个接口崩溃
+            logger.warning(f"image_to_public failed for image_id={img.id}", exc_info=True)
+            continue
 
     return PaginatedResponse[ImagePublic].create(
         items=public_items,

@@ -1,17 +1,7 @@
-"""
-Image Schema — 分模块优化：
-
-模块 1: 类型修正   → category 绑定 Category 枚举，tags 改为 list[str]
-模块 2: 继承优化   → ImagePublic / ImageUpdate 继承 ImageBase，消除重复
-模块 3: 响应补全   → ImagePublic 补全 thumbnail_url / file_size / mime_type 等
-模块 4: 新增       → ImageCreate（上传时校验元信息）
-模块 5: 搜索对齐   → ImageSearchParams.user_name → user_id
-"""
-
 from __future__ import annotations
 
 from datetime import datetime
-
+from fastapi import Query
 from sqlmodel import Field, SQLModel
 
 from app.utils.enums import Category
@@ -120,20 +110,26 @@ class ImageUpdate(SQLModel):
 # ══════════════════════════════════════════════
 
 class ImageSearchParams(SQLModel):
-    """URL 查询参数（Query 参数）"""
+    """
+    URL 查询参数（Query 参数）
+    ⚠️ 查询参数必须用 fastapi.Query 而不是 sqlmodel.Field：
+       sqlmodel.Field 会把 FieldInfoMetadata 塞进 Annotated metadata，
+       该对象不可哈希，FastAPI 0.141 + Python 3.14 生成 /openapi.json
+       时会崩溃（unhashable type: 'FieldInfoMetadata'）。
+    """
 
-    q: str | None = Field(default=None, max_length=200)
+    q: str | None = Query(default=None, max_length=200)
 
     # ✅ 模块 1: 枚举过滤
-    category: Category | None = Field(default=None)
+    category: Category | None = None
 
     # ✅ 模块 1: 单标签过滤（模型层 tags 是 JSON list，
     #    查询时用 contains 匹配单个标签即可）
-    tag: str | None = Field(default=None, max_length=100)
+    tag: str | None = Query(default=None, max_length=100)
 
     # ✅ 模块 5: user_name → user_id（与模型层外键对齐）
-    user_id: int | None = Field(default=None, ge=1)
+    user_id: int | None = Query(default=None, ge=1)
 
     # ── 分页 ──
-    skip: int = Field(default=0, ge=0)
-    limit: int = Field(default=20, ge=1, le=100)
+    skip: int = Query(default=0, ge=0)
+    limit: int = Query(default=20, ge=1, le=100)

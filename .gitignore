@@ -23,3 +23,4 @@ uploads/
 
 # 运行时/上传的图片
 static/images/*
+graphify-out/
