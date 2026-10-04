@@ -41,6 +41,14 @@ class Settings(BaseSettings):
     COOKIE_SECURE: bool = True
     COOKIE_SAME_SITE: Literal["strict", "lax", "none"] = "lax"
 
+    # ---  数据库连接池 ---
+    DATABASE_POOL_SIZE: int = 10
+    DATABASE_MAX_OVERFLOW: int = 20
+    DATABASE_POOL_RECYCLE: int = 3600  # 连接池中连接的最大存活时间（秒）
+
+    # --- 日志 ---
+    LOG_FORMAT: str = "console"  # 开发环境使用 console，生产环境使用 json
+
     @model_validator(mode="after")
     def check_production_settings(self):
         if self.APP_ENV == "production":

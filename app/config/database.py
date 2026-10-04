@@ -6,7 +6,11 @@ from app.config.settings import settings
 engine: AsyncEngine = create_async_engine(
     settings.DATABASE_URL, 
     echo=settings.DEBUG, 
-    future=True
+    future=True,
+    pool_size=settings.DATABASE_POOL_SIZE,
+    max_overflow=settings.DATABASE_MAX_OVERFLOW,
+    pool_recycle=settings.DATABASE_POOL_RECYCLE,
+    pool_pre_ping=True,  # 检查连接是否有效
 )
 
 async_session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(
