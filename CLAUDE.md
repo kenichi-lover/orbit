@@ -1,6 +1,6 @@
 # Orbit Gallery — 项目进度
 
-> 最后更新：2026-09-12
+> 最后更新：2026-10-04
 
 ---
 
@@ -25,7 +25,7 @@
 - [x] Jinja2 模板继承体系（`base.html` → `pages/*.html`）
 - [x] 静态文件服务 `/static`
 - [x] 配置管理（`app/config/settings.py` 读取 .env）
-- [x] 异步数据库层（`app/config/database.py`：AsyncEngine + async_sessionmaker + get_session + create_db_and_tables）
+- [x] 异步数据库层（`app/config/database.py`：AsyncEngine + 连接池配置 + get_session；`create_db_and_tables` 仅供开发环境使用，生产统一走 Alembic）
 - [x] 数据模型定义
   - `app/models/image.py` — Image 表（author_id FK、file_name unique、tags ARRAY、category ENUM、软删除、时间戳）
   - `app/models/user.py` — User 表（username、email、hashed_password、is_active、is_superuser、avatar_url、时间戳）

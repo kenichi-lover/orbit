@@ -41,7 +41,7 @@ npx tailwindcss -i static/css/input.css -o static/css/tailwind.css --watch
 | 配置 | pydantic-settings (.env) |
 | 样式 | Tailwind CSS + 手写主题 CSS |
 | 交互 | Vanilla JavaScript (ES Module)，无框架 |
-| 安全 | JWT + bcrypt + slowapi 限流 + secure CSP |
+| 安全 | JWT + argon2-cffi + slowapi 限流 + secure CSP |
 | 图片处理 | Pillow（缩略图生成） |
 
 ---
@@ -59,7 +59,7 @@ orbit/
 ├── app/
 │   ├── config/
 │   │   ├── settings.py          # pydantic-settings 读取 .env
-│   │   └── database.py          # AsyncEngine + async_sessionmaker + get_session()
+│   │   └── database.py          # AsyncEngine + async_sessionmaker + get_session() + 连接池配置
 │   ├── models/
 │   │   ├── image.py             # Image 表模型
 │   │   └── user.py              # User 表模型
@@ -87,7 +87,7 @@ orbit/
 │       ├── jwt.py               # JWT 签发与验证
 │       ├── limiter.py           # 请求限流（slowapi）
 │       ├── pagination.py        # 分页工具
-│       └── security.py          # bcrypt 哈希/校验
+│       └── security.py          # argon2-cffi 哈希/校验
 │
 ├── templates/
 │   ├── base.html                # 模板继承基座（导航栏、主题切换、Modal）
@@ -140,7 +140,6 @@ orbit/
 | `/api/images` | GET | 否 | 图片列表（分页，公开） |
 | `/api/search` | GET | 否 | 搜索（关键词 / 分类 / 标签 / 作者） |
 | `/api/images/upload` | POST | 是 | 上传图片 |
-| `/api/images/{id}` | GET | 否 | 图片详情 |
 | `/api/images/{id}` | PUT | 是 | 更新元数据（仅作者或管理员） |
 | `/api/images/{id}` | DELETE | 是 | 软删除（仅作者或管理员） |
 
@@ -191,7 +190,7 @@ orbit/
 - 分类 + 标签筛选面板（toggle 切换，RESTful 枚举驱动）
 - 深色 / 浅色主题（localStorage 持久化）
 - 叙事模式（时间线 + 编辑 / 删除，权限控制 + XSS 防护）
-- 完整认证体系（JWT + httpOnly cookie + bcrypt）
+- 完整认证体系（JWT + httpOnly cookie + argon2-cffi）
 - 管理员接口（5 个端点，全部 require_superuser 守卫）
 - 头像上传（上传 → 存储 → URL 写入数据库，接口已联调）
 - 请求限流（slowapi，基于 IP）
@@ -276,7 +275,7 @@ orbit/
 | id | int (PK, auto) | 主键 |
 | username | str (unique) | 用户名 |
 | email | str (unique) | 邮箱 |
-| hashed_password | str | bcrypt 哈希密码 |
+| hashed_password | str | argon2-cffi 哈希密码 |
 | is_active | bool | 激活状态 |
 | is_superuser | bool | 超级管理员 |
 | avatar_url | str \| None | 头像 URL（持久化到数据库） |
@@ -295,7 +294,7 @@ orbit/
 | `SECRET_KEY` | ✅ | JWT 签名密钥，生产环境至少 32 字符的强随机值 |
 | `APP_ENV` | ✅ | `development` / `production` / `testing` |
 | `DEBUG` | - | 调试模式，生产环境必须为 `False` |
-| `UPLOAD_DIR` | - | 上传文件目录（相对于项目根），默认 `uploads` |
+| `MAX_UPLOAD_SIZE` | `10485760` | 图片上传大小上限（字节），默认 10MB |
 | `ASSETS_BASE_URL` | - | 图片 CDN 基础 URL，部署时配置以支持 CDN 分发 |
 
 ### 上传与存储
@@ -316,7 +315,9 @@ orbit/
 
 ## 部署
 
-详见 [DEPLOYMENT.md](./DEPLOYMENT.md)。
+详见 [docs/ops-checklist.md](./docs/ops-checklist.md)（含完整部署步骤、备份策略和上线清单）。
+
+如需简略参考，可在 ops-checklist.md 中跳过"服务器准备"部分直接跳到"项目部署"。
 
 ### 快速参考
 
