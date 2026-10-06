@@ -30,6 +30,7 @@ CREATE USER orbit_user WITH PASSWORD '<强密码>';
 ALTER ROLE orbit_user SET client_encoding TO 'utf8';
 ALTER ROLE orbit_user SET default_transaction_isolation TO 'read committed';
 GRANT ALL PRIVILEGES ON DATABASE orbit TO orbit_user;
+GRANT ALL ON SCHEMA public TO orbit_user;  -- PG15+ 必需，否则 alembic 建表无权限
 \q
 ```
 
@@ -43,6 +44,7 @@ cd /opt
 git clone git@github.com:<user>/orbit.git orbit
 cd orbit
 uv sync
+uv add gunicorn  # gunicorn 不在项目依赖中，但 systemd 启动必需（见第四节）
 
 # 配置环境变量
 cp .env.example .env
@@ -53,7 +55,29 @@ nano .env
 # 运行 Alembic 迁移（schema 由迁移文件管理，不执行 create_all）
 uv run alembic upgrade head
 
-# 创建初始超级管理员（在数据库中直接插入或使用初始化脚本）
+# 初始超级管理员：项目没有初始化脚本，且 user_admin 路由全部要求已有超管权限
+#（鸡生蛋问题），需手动插入。注意 session 工厂导出名为 async_session_factory：
+uv run python - <<'EOF'
+import asyncio
+from sqlmodel import select
+from app.config.database import async_session_factory
+from app.models.user import User
+from app.utils.security import hash_password
+
+async def main():
+    async with async_session_factory() as s:
+        existing = (await s.execute(select(User).where(User.username == "admin"))).scalar_one_or_none()
+        if not existing:
+            s.add(User(username="admin", email="admin@example.com",
+                       hashed_password=hash_password("<强密码>"),
+                       is_superuser=True, is_active=True))
+            await s.commit()
+            print("超级管理员已创建")
+        else:
+            print("已存在，跳过")
+
+asyncio.run(main())
+EOF
 ```
 
 ---
@@ -91,7 +115,8 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/orbit/uploads
+# 图片写入 static/images、static/avatars（uploads 仅为启动时创建的运行时目录）
+ReadWritePaths=/opt/orbit/static /opt/orbit/uploads
 EOF
 
 # 启用并启动
@@ -127,17 +152,12 @@ server {
     }
 
     # 静态文件由 Nginx 直接服务
+    # 业务上传的图片存于 static/images/{年}/{月}/{uuid}.ext、头像存 static/avatars/，
+    # 均在此目录下；文件名含 uuid 不可变，可安全使用 immutable
     location /static/ {
         alias /opt/orbit/static/;
         expires 30d;
         add_header Cache-Control "public, immutable";
-    }
-
-    # 用户上传的图片（允许浏览器缓存但不过期过久）
-    location /uploads/ {
-        alias /opt/orbit/uploads/;
-        expires 7d;
-        add_header Cache-Control "public";
     }
 }
 EOF
