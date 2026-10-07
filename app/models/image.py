@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ARRAY, Column, String
+from sqlalchemy import ARRAY, Column, String, Enum
 from sqlmodel import Field, Relationship, SQLModel
 from sqlalchemy.orm import Mapped
 
@@ -28,7 +28,18 @@ class ImageBase(SQLModel):
     alt_text: str | None = Field(default=None, max_length=255)
 
     # ── 模块 3: category 绑定枚举 ──
-    category: Category = Field(default=Category.GALLERY)
+    category: Category = Field(
+        default=Category.GALLERY,
+        sa_column=Column(
+            Enum(
+                Category, 
+                values_callable=lambda obj: [e.value for e in obj],
+                create_type=False
+                ),
+            nullable=False,
+            server_default=Category.GALLERY.value,
+        )
+    )
 
     # ✅ 修复：tags 在 Base 层只做 Pydantic 验证
     # 实际列定义放在 Image 表模型中用 sa_column

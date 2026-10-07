@@ -229,3 +229,27 @@ sudo crontab -u orbit -e
 | 数据库连接失败 | 确认 `DATABASE_URL` 格式正确，PostgreSQL 正在运行 |
 | HTTPS 证书过期 | `sudo certbot renew --dry-run` |
 | 日志过大 | `sudo journalctl --vacuum-size=100M` |
+
+
+## 十 项目生产上线优化
+
+原文档方案	实际采用
+Nginx 容器 + certbot 签发 HTTPS	❌ 跳过，Cloudflare Tunnel 边缘终结 HTTPS
+cloudflared 未涉及	✅ systemd 常驻，配置 /etc/cloudflared/config.yml（或用户级 ~/.cloudflared/），ingress → http://localhost:8000
+TCP + 密码连数据库	✅ Unix socket + peer 认证：postgresql+asyncpg:///orbit?host=/var/run/postgresql
+ProtectHome=true	⚠️ 必须用 read-only（项目在 /home 下），否则 Status=226
+worker 类 uvicorn.workers.UvicornWorker	✅ 新包名 uvicorn_worker.UvicornWorker
+gunicorn 4 worker	✅ 2 worker（连接池 = 2 × (10+20) = 60 上限，足够）
+ExecStart	加 --no-control-socket 避免 ProtectHome=read-only 下的 control socket 报错
+
+
+上线清单(全部清零)
+✅ 数据库：orbit 库、paul 角色、socket peer 认证、迁移至 ec2f092f4bd5
+✅ 依赖：gunicorn 26.2.0 + uvicorn-worker 0.4.0
+✅ 配置：.env production 校验通过、SECRET_KEY 强随机
+✅ 超管：admin + paul
+✅ 应用：orbit.service active，2 worker，/health 200
+✅ 隧道：cloudflared systemd 常驻，CONNECTIONS ×2
+✅ 域名：https://paul-nebula.online 端到端可达，安全头齐全
+🟡 待办：enable orbit、--no-control-socket、备份 cron、DEPLOYMENT.md 更新
+

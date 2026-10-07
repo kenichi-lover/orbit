@@ -61,33 +61,59 @@ export function initNav() {
 }
 
 function filterImages(query) {
-  // Filter orbit photos
+  // 查找轨道上的照片元素
   const photoItems = document.querySelectorAll('.photo-item');
   photoItems.forEach(item => {
+    const title = (item.dataset.title || '').toLowerCase();
+    const tags = (item.dataset.tags || '').toLowerCase();
+    const category = (item.dataset.category || '').toLowerCase();
     const url = item.src.toLowerCase();
 
-    // For now, if query is empty, show all.
-    // If not empty, hide those that don't match.
-    // We can simulate tags by matching the image filename.
-    if (!query || url.includes(query)) {
+    // 如果查询为空，显示所有
+    if (!query) {
+      item.style.display = 'block';
+      return;
+    }
+
+    // 匹配标题、标签、分类或文件名
+    const matchesTitle = title.includes(query);
+    const matchesTags = tags.split(' ').some(tag => tag.includes(query));
+    const matchesCategory = category.includes(query);
+    const matchesUrl = url.includes(query);
+
+    if (matchesTitle || matchesTags || matchesCategory || matchesUrl) {
       item.style.display = 'block';
     } else {
       item.style.display = 'none';
     }
   });
 
-  // Filter thumbnails
+  // 筛选缩略图
   const thumbItems = document.querySelectorAll('.thumbnail-item');
   thumbItems.forEach(item => {
+    const title = (item.dataset.title || '').toLowerCase();
+    const tags = (item.dataset.tags || '').toLowerCase();
+    const category = (item.dataset.category || '').toLowerCase();
     const url = item.src.toLowerCase();
-    if (!query || url.includes(query)) {
+
+    if (!query) {
+      item.style.display = 'block';
+      return;
+    }
+
+    const matchesTitle = title.includes(query);
+    const matchesTags = tags.split(' ').some(tag => tag.includes(query));
+    const matchesCategory = category.includes(query);
+    const matchesUrl = url.includes(query);
+
+    if (matchesTitle || matchesTags || matchesCategory || matchesUrl) {
       item.style.display = 'block';
     } else {
       item.style.display = 'none';
     }
   });
 
-  // Re-render story mode if it's active
+  // 如果叙事模式处于激活状态，重新渲染
   const storyStage = document.getElementById("story-stage");
   if (storyStage && storyStage.style.display !== "none") {
     renderStoryMode(query);

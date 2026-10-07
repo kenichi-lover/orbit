@@ -196,17 +196,25 @@ function initPhotos() {
       img.className = "photo-item";
       img.dataset.index = i + layer * photoCount;
       img.dataset.layer = layer;
-      
+
+      // 将图片元数据写入 DOM，供搜索功能使用
+      const info = config.imagesInfo[i + layer * photoCount] || {};
+      if (info.title) img.dataset.title = info.title;
+      if (info.category) img.dataset.category = info.category;
+      if (Array.isArray(info.tags) && info.tags.length > 0) {
+        img.dataset.tags = info.tags.join(' ');
+      }
+
       // 设置初始位置 - 围绕中心点
       const angle = angleStep * i;
       const x = Math.cos(angle) * radius;
       const y = Math.sin(angle) * radius;
       const z = layer * 80 - 80;
-      
+
       img.style.setProperty('--initial-x', `${x}px`);
       img.style.setProperty('--initial-y', `${y}px`);
       img.style.setProperty('--initial-z', `${z}px`);
-      
+
       img.addEventListener("mouseenter", () => {
         config.isAutoRotate = false;
       });
@@ -217,7 +225,7 @@ function initPhotos() {
         e.stopPropagation();
         openImagePreview(img.dataset.index);
       });
-      
+
       layerPhotos.appendChild(img);
     }
     ring.appendChild(layerPhotos);
@@ -252,10 +260,19 @@ function renderThumbnails() {
 
   for (let i = start; i < end; i++) {
     const url = config.thumbAllImages[i].url;
+    const info = config.thumbAllImages[i];
     const thumb = document.createElement("img");
     thumb.src = url;
     thumb.className = "thumbnail-item";
     thumb.dataset.index = i;
+
+    // 设置元数据供搜索使用
+    if (info.title) thumb.dataset.title = info.title;
+    if (info.category) thumb.dataset.category = info.category;
+    if (Array.isArray(info.tags) && info.tags.length > 0) {
+      thumb.dataTags = info.tags.join(' ');
+    }
+
     thumb.addEventListener("click", () => showDetail(i));
     thumbnailBar.appendChild(thumb);
   }

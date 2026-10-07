@@ -349,3 +349,6 @@ uv run fastapi dev main.py
 - **ES Module 时序**：前端用户数据从 DOM `#current-user-data` 读取，避免模块加载竞态
 - **XSS 防护**：所有用户输入通过 `escapeHtml()` 转义后再渲染到 DOM
 - **安全头**：CSP 由 `secure` 中间件统一注入，新增路由无需额外配置
+-
+## 项目生产上线说明
+旧项目已成功被新项目替掉——同一域名、同一隧道、同一端口，无缝切换。浏览器里把 https://paul-nebula.online 完整走一遍登录和上传流程确认无误，这个项目就算画上句号了。后续想加 R2 冷备份、Cloudflare Access 给 /docs 上锁之类，随时另起话题。

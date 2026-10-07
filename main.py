@@ -1,5 +1,5 @@
 import logging
-from logging.handlers import RotatingFileHandler
+#from logging.handlers import RotatingFileHandler
 import sys
 import uuid
 from contextlib import asynccontextmanager
@@ -33,7 +33,7 @@ from app.utils import limiter
 # P1-4: 结构化日志配置（structlog）
 # ============================================================
 # 进程启动前先确保 logs 目录存在，否则 RotatingFileHandler 会报错
-Path("logs").mkdir(parents=True, exist_ok=True)
+#Path("logs").mkdir(parents=True, exist_ok=True)
 
 # ----------1. 公共处理器：两种格式共享的部分 ----------
 structlog_processors = [
@@ -60,14 +60,14 @@ structlog.configure(
     cache_logger_on_first_use=True,
 )
 # ---------- ④ 最后挂文件 handler（仅生产） ----------
-if settings.LOG_FORMAT == "json":
-    from logging.handlers import RotatingFileHandler
-    file_handler = RotatingFileHandler(
-        "logs/app.log", maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
-    )
-    file_handler.setFormatter(logging.Formatter("%(message)s"))
-    logging.getLogger().addHandler(file_handler)
-
+#if settings.LOG_FORMAT == "json":
+#    from logging.handlers import RotatingFileHandler
+#    file_handler = RotatingFileHandler(
+#        "logs/app.log", maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
+#    )
+#    file_handler.setFormatter(logging.Formatter("%(message)s"))
+#    logging.getLogger().addHandler(file_handler)
+#
 logger = structlog.get_logger(__name__)
 
 
@@ -78,7 +78,7 @@ REQUIRED_DIRS = [
     Path("uploads"),
     Path("static/images"),
     Path("static/avatars"),
-    Path("logs"),
+#    Path("logs"),
 ]
 
 

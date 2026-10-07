@@ -1,4 +1,5 @@
 from typing import Annotated
+from app.models.image import Image
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,7 +48,7 @@ async def _get_image_with_author(
         stmt = stmt.where(col(Image.is_deleted) == False)  # noqa: E712
 
     # 预加载作者信息
-    stmt = stmt.options(selectinload("author"))   # type: ignore[arg-type]
+    stmt = stmt.options(selectinload(Image.author)) 
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 
